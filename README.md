@@ -9,6 +9,8 @@ The attacker has just penetrated your corporate network. He doesn't have an acco
 A running sniffer is not yet a network attack, but its detection is an important prerequisite for possible future attacks. A decent user will not run the sniffer.
 A carelessly launched sniffer will make DNS requests that are predictable for us, since the sniffer can show a domain name instead of an IP address. If we periodically send a packet on behalf of an IP address that has a PTR DNS record, and then check the presence of this record in the cache of the corporate DNS server (non-recursive request, aka DNS cache snooping), then we will most likely detect an attacker.
 
+![sniffer.py](img/sniffer.png)
+
 ## Active Directory level \[internal intruder\]
 
 Coming soon

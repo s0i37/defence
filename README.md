@@ -11,6 +11,13 @@ A carelessly launched sniffer will make DNS requests that are predictable for us
 
 ![sniffer.py](img/sniffer.png)
 
+### tcp.py
+The second thing that an internal attacker will most likely use at the very beginning is, of course, port scanning. While he does not have an account and does not understand the structure of the network, he will blindly search for his targets by scanning ports. And sooner or later its packets will reach your computer.
+It is quite easy to notice such activity. Of all the traffic, only TCP-SYN packets need to be isolated, which is an excellent marker for this network attack. The `tcp.py` script reacts only to incoming connections; if the number of unique ports is exceeded, an alert occurs.
+As a result, even if the attacker scanned only a couple of ports, we will see it.
+
+![tcp.py](img/scan.png)
+
 ## Active Directory level \[internal intruder\]
 
 Coming soon

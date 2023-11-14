@@ -15,7 +15,7 @@ def alert(ip):
 	if ip in alerts:
 		return
 	print("[!] sniffer detected %s" % ip)
-	system("mplayer /home/soier/.music/sounds/StarCraft/usunaleskanal.wav >/dev/null 2>/dev/null")
+	system("mplayer /home/soier/.music/sounds/StarCraft/usunaleskanal.wav >/dev/null 2>/dev/null &")
 	system("zenity --warning --title='sniffer detected' --text='sniffer detected: %s' &" % ip)
 	#system("echo 'sniffer detected' | festival --tts --language english")
 	alerts.append(ip)

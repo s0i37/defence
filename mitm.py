@@ -39,10 +39,11 @@ distances = {}
 while True:
 	for target in targets:
 		distance = probe_ttl(target)
+		#distance = probe_traceroute(target)
 		if distance:
 			if not distances.get(target):
 				distances[target] = distance
-			if distances[target] < distance:
+			if distances[target] != distance:
 				alert(target, distances[target], distance)
 		sleep(1)
 	sleep(30)

@@ -9,14 +9,24 @@ The attacker has just penetrated your corporate network. He doesn't have an acco
 A running sniffer is not yet a network attack, but its detection is an important prerequisite for possible future attacks. A decent user will not run the sniffer.
 A carelessly launched sniffer will make DNS requests that are predictable for us, since the sniffer can show a domain name instead of an IP address. If we periodically send a packet on behalf of an IP address that has a PTR DNS record, and then check the presence of this record in the cache of the corporate DNS server (non-recursive request, aka DNS cache snooping), then we will most likely detect an attacker.
 
-![sniffer.py](img/sniffer.png)
+<table border="0">
+ <tr>
+    <td><img alt="tcpdump" src="img/sniffer-tcpdump.png"></td>
+    <td><img alt="sniffer.py" src="img/sniffer.png"></td>
+ </tr>
+</table>
 
 ### tcp.py
 The second thing that an internal attacker will most likely use at the very beginning is, of course, port scanning. While he does not have an account and does not understand the structure of the network, he will blindly search for his targets by scanning ports. And sooner or later its packets will reach your computer.
 It is quite easy to notice such activity. Of all the traffic, only TCP-SYN packets need to be isolated, which is an excellent marker for this network attack. The `tcp.py` script reacts only to incoming connections; if the number of unique ports is exceeded, an alert occurs.
 As a result, even if the attacker scanned only a couple of ports, we will see it.
 
-![tcp.py](img/scan.png)
+<table border="0">
+ <tr>
+    <td><img alt="nmap" src="img/scan-nmap.png"></td>
+    <td><img alt="tcp.py" src="img/scan.png"></td>
+ </tr>
+</table>
 
 ### mitm.py
 
@@ -24,7 +34,12 @@ Having listened to enough traffic and scanned his targets, the attacker can fina
 This script periodically pings each node in the list. And as soon as the route length (IP.ttl) changes somewhere, it produces a trace instantly calculating the impudent one.
 The first thing you need to monitor in this way is, of course, your gateway. However, this detection method allows you to see the consequences of traffic interception outside your own subnet - throughout the entire local network, because it is far from a fact that the attacker will be on the same subnet as you. So the monitoring list can be expanded to include critical servers - your DC, Exchange, SCCM, WSUS, virtualization, etc. Moreover, you can monitor the gateway of each VLAN and even each workstation.
 
-![mitm.py](img/mitm.png)
+<table border="0">
+ <tr>
+    <td><img alt="ettercap" src="img/mitm-ettercap.png"></td>
+    <td><img alt="mitm.py" src="img/mitm.png"></td>
+ </tr>
+</table>
 
 Under some circumstances, an attacker may stand not in the middle, but instead of some network device.
 Therefore, it is more effective to check traffic interception not through the length of the route, but through the route itself - using tracerouting. This method will also allow you to see particularly cunning attackers who made a TTL fixation before intercepting traffic.
@@ -37,7 +52,19 @@ If IPv6 is not used on the local network, but it is not disabled on network node
 Both attacks can be detected with single Discover requests. The script periodically sends such broadcast requests to DHCP and DHCPv6. And if someone else besides the legitimate node begins to respond, detection occurs.
 Application - only the current network segment.
 
-![dhcp.py](img/dhcp.png)
+<table border="0">
+ <tr>
+    <td><img alt="ettercap" src="img/dhcp-ettercap.png"></td>
+    <td><img alt="dhcp.py" src="img/dhcp.png"></td>
+ </tr>
+</table>
+
+<table border="0">
+ <tr>
+    <td><img alt="mitm6" src="img/dhcp6-mitm6.png"></td>
+    <td><img alt="dhcp.py" src="img/dhcp6.png"></td>
+ </tr>
+</table>
 
 ## Active Directory level \[internal intruder\]
 

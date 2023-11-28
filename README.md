@@ -26,6 +26,19 @@ The first thing you need to monitor in this way is, of course, your gateway. How
 
 ![mitm.py](img/mitm.png)
 
+Under some circumstances, an attacker may stand not in the middle, but instead of some network device.
+Therefore, it is more effective to check traffic interception not through the length of the route, but through the route itself - using tracerouting. This method will also allow you to see particularly cunning attackers who made a TTL fixation before intercepting traffic.
+However, the tracing procedure is somewhat longer, and therefore this default detection method is commented out in the script.
+
+### dhcp.py
+
+In local networks, in addition to full-fledged MiTM attacks, “partial” traffic interception attacks can also be carried out. One example would be DHCP allowing you to specify yourself as a gateway or DNS server. By controlling DNS requests, an attacker can selectively redirect connections, thereby implementing partial MiTM.
+If IPv6 is not used on the local network, but it is not disabled on network nodes, then an attacker can achieve a similar effect using DHCPv6, since all modern operating systems prefer IPv6 over IPv4.
+Both attacks can be detected with single Discover requests. The script periodically sends such broadcast requests to DHCP and DHCPv6. And if someone else besides the legitimate node begins to respond, detection occurs.
+Application - only the current network segment.
+
+![dhcp.py](img/dhcp.png)
+
 ## Active Directory level \[internal intruder\]
 
 Coming soon

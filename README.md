@@ -66,6 +66,19 @@ Application - only the current network segment.
  </tr>
 </table>
 
+### netbios.py
+
+In local networks, a much more popular example of partial traffic interception is <ins>responder</ins>. By responding with false responses to name resolution broadcasts (for example through NetBIOS), a hacker can trick your workstation into connecting anywhere, even to himself. As a result, this leads to erroneous connections, with usually automatic end-to-end authentication. In turn, this exposes credentials that can be subject to bruteforce attacks, or can be used to bypass authentication using NTLM relay attacks.
+Detecting a responder is easy. You just need to generate a random short name and ask about it broadcast. Script `netbios.py` makes this check. It periodically broadcasts NetBIOS requests with random names to the network. And as soon as the answers begin to arrive - alert.
+Application - only the current network segment.
+
+<table border="0">
+ <tr>
+    <td><img alt="responder" src="img/netbios-responder.png"></td>
+    <td><img alt="netbios.py" src="img/netbios.png"></td>
+ </tr>
+</table>
+
 ## Active Directory level \[internal intruder\]
 
 Coming soon

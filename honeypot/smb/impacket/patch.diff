@@ -1,0 +1,104 @@
+diff --git a/examples/smbserver.py b/examples/smbserver.py
+index df658a0f..a76af206 100755
+--- a/examples/smbserver.py
++++ b/examples/smbserver.py
+@@ -17,6 +17,7 @@
+ import sys
+ import argparse
+ import logging
++sys.path = ["."] + sys.path
+ 
+ from impacket.examples import logger
+ from impacket import smbserver, version
+diff --git a/impacket/smbserver.py b/impacket/smbserver.py
+index 8914f4b8..79922d07 100644
+--- a/impacket/smbserver.py
++++ b/impacket/smbserver.py
+@@ -55,7 +55,7 @@ from impacket.nt_errors import STATUS_NO_MORE_FILES, STATUS_NETWORK_NAME_DELETED
+     STATUS_FILE_IS_A_DIRECTORY, STATUS_NOT_IMPLEMENTED, STATUS_INVALID_HANDLE, STATUS_OBJECT_NAME_COLLISION, \
+     STATUS_NO_SUCH_FILE, STATUS_CANCELLED, STATUS_OBJECT_NAME_NOT_FOUND, STATUS_SUCCESS, STATUS_ACCESS_DENIED, \
+     STATUS_NOT_SUPPORTED, STATUS_INVALID_DEVICE_REQUEST, STATUS_FS_DRIVER_REQUIRED, STATUS_INVALID_INFO_CLASS, \
+-    STATUS_LOGON_FAILURE, STATUS_OBJECT_PATH_SYNTAX_BAD
++    STATUS_LOGON_FAILURE, STATUS_OBJECT_PATH_SYNTAX_BAD, STATUS_INSUFF_SERVER_RESOURCES
+ 
+ # Setting LOG to current's module name
+ LOG = logging.getLogger(__name__)
+@@ -64,6 +64,7 @@ LOG = logging.getLogger(__name__)
+ STATUS_SMB_BAD_UID = 0x005B0002
+ STATUS_SMB_BAD_TID = 0x00050002
+ 
++TRANS_PEEK_NMPIPE = 0x23
+ 
+ # Utility functions
+ # and general functions.
+@@ -71,6 +72,16 @@ STATUS_SMB_BAD_TID = 0x00050002
+ # command (or either TRANSACTION). That's why I'm putting them here
+ # TODO: Return NT ERROR Codes
+ 
++alerts = []
++def alert(ip):
++    if ip in alerts:
++        return
++    print("[!] MS17-010 exploitation detected: %s" % ip)
++    os.system("mplayer /home/soier/.music/sounds/StarCraft/usunaleskanal.wav >/dev/null 2>/dev/null &")
++    os.system("zenity --warning --title='MS17-010 exploitation detected' --text='MS17-010 exploitation detected' &")
++    #os.system("echo 'MS17-010 exploitation detected' | festival --tts --language english")
++    alerts.append(ip)
++
+ def computeNTLMv2(identity, lmhash, nthash, serverChallenge, authenticateMessage, ntlmChallenge, type1):
+     # Let's calculate the NTLMv2 Response
+ 
+@@ -234,6 +245,7 @@ def getShares(connId, smbServer):
+ 
+ 
+ def searchShare(connId, share, smbServer):
++    smbServer.log(share)
+     config = smbServer.getServerConfig()
+     if config.has_section(share):
+         return dict(config.items(share))
+@@ -973,7 +985,8 @@ class SMBCommands:
+             transData['Trans_ParametersLength'] = paramCount
+             dataCount = transParameters['DataCount']
+             transData['Trans_DataLength'] = dataCount
+-            transData.fromString(SMBCommand['Data'])
++            try: transData.fromString(SMBCommand['Data']) # possible MS17-010 exception pass
++            except: pass
+             if transParameters['ParameterOffset'] > 0:
+                 paramOffset = transParameters['ParameterOffset'] - 63 - transParameters['SetupLength']
+                 transData['Trans_Parameters'] = SMBCommand['Data'][paramOffset:paramOffset + paramCount]
+@@ -1084,6 +1097,11 @@ class SMBCommands:
+                     smbServer.setConnectionData(connId, connData)
+                     return commands, None, errorCode
+ 
++            elif command == TRANS_PEEK_NMPIPE and transParameters['MaxParameterCount'] == 0xffff:
++                errorCode = STATUS_INSUFF_SERVER_RESOURCES
++                respParameters = b''
++                respData = b''
++                alert(connData['ClientIP'])
+             else:
+                 smbServer.log("Unsupported Transact command %r" % command, logging.ERROR)
+                 respParameters = b''
+@@ -3885,6 +3903,8 @@ class SMBSERVER(socketserver.ThreadingMixIn, socketserver.TCPServer):
+             smb.SMB.SMB_COM_TRANSACTION: self.__smbCommandsHandler.smbTransaction,
+             # Not needed for now
+             smb.SMB.SMB_COM_NT_TRANSACT: self.__smbCommandsHandler.smbNTTransact,
++            smb.SMB.SMB_COM_NT_TRANSACT_SECONDARY: lambda *_: [[],[],[]],
++            smb.SMB.SMB_COM_TRANSACTION2_SECONDARY: lambda *_: [[],[],[]],
+             smb.SMB.SMB_COM_QUERY_INFORMATION_DISK: self.__smbCommandsHandler.smbQueryInformationDisk,
+             smb.SMB.SMB_COM_OPEN_ANDX: self.__smbCommandsHandler.smbComOpenAndX,
+             smb.SMB.SMB_COM_QUERY_INFORMATION2: self.__smbCommandsHandler.smbComQueryInformation2,
+@@ -4685,11 +4705,10 @@ class SimpleSMBServer:
+             self.__smbConfig = configparser.ConfigParser()
+             self.__smbConfig.add_section('global')
+             self.__smbConfig.set('global', 'server_name',
+-                                 ''.join([random.choice(string.ascii_letters) for _ in range(8)]))
+-            self.__smbConfig.set('global', 'server_os', ''.join([random.choice(string.ascii_letters) for _ in range(8)])
+-                                 )
++                                 'DC01')
++            self.__smbConfig.set('global', 'server_os', 'Windows 7 Enterprise 7601 Service Pack 1')
+             self.__smbConfig.set('global', 'server_domain',
+-                                 ''.join([random.choice(string.ascii_letters) for _ in range(8)])
++                                 'WORKGROUP'
+                                  )
+             self.__smbConfig.set('global', 'log_file', 'None')
+             self.__smbConfig.set('global', 'rpc_apis', 'yes')

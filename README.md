@@ -79,6 +79,23 @@ Application - only the current network segment.
  </tr>
 </table>
 
+### honeypot/smb/ms17-010.sh
+
+Once on the internal network, advanced attackers look for so-called “low-hanging fruit” - vulnerabilities that are frequently encountered, easily exploited and have the highest impact. And perhaps the champion here is MS17-010. Checkers for this vulnerability are everywhere: in scanners like `nessus`, exploit packs like `metasploit`, and of course everyone’s favorite `nmap`.
+In all cases, the vulnerability check occurs in a similar way - calling the SMB transaction TRANS_PEEK_NMPIPE (0x23) with the parameter MaxParameterCount = 0xffff, the response to which should be STATUS_INSUFF_SERVER_RESOURCES (0xC0000205).
+To pretend that we are vulnerable to MS17-010, we can use the hacker tool `smbserver.py` as a basis. As a result, our computer will look vulnerable to all checkers.
+
+<table border="0">
+ <tr>
+    <td><img alt="nmap" src="img/honeypot-ms17-010.png"></td>
+    <td><img alt="smbserver.py" src="img/honeypot-smb.png"></td>
+ </tr>
+</table>
+
+
+Just imagine the joy of a hacker who discovered a vulnerable machine - and you set him on the wrong trail and caught him in a trap.
+Such a trap `ms17-010.sh` will be more noticeable in networks with a high level of security, because even one single MS17-010 for an attacker will be like a fire in the middle of a field at night.
+
 ## Active Directory level \[internal intruder\]
 
 Coming soon

@@ -96,6 +96,21 @@ To pretend that we are vulnerable to MS17-010, we can use the hacker tool `smbse
 Just imagine the joy of a hacker who discovered a vulnerable machine - and you set him on the wrong trail and caught him in a trap.
 Such a trap `ms17-010.sh` will be more noticeable in networks with a high level of security, because even one single MS17-010 for an attacker will be like a fire in the middle of a field at night.
 
+### honeypot/ssh/auth.py
+
+On a local network, Linux servers can also be attacked. The most common, simple and effective attack against them is ssh password guessing. Unlike all other potentially vulnerable services, openssh is present on almost every server. Such low-hanging fruit can follow both in the very first steps after hacking - immediately after port scanning, and later - during a password spraying attack.
+All you need to notice an attacker is just run an SSH server somewhere that shows authentication attempts.
+Based on the results of port scanning, it will certainly be included in the list of brute force targets and will immediately notice this attack.
+
+<table border="0">
+ <tr>
+    <td><img alt="metasploit" src="img/honeypot-metasploit.png"></td>
+    <td><img alt="auth.py" src="img/honeypot-ssh.png"></td>
+ </tr>
+</table>
+
+And from the passwords we select, we can quickly understand that one or another dictionary was used.
+
 ## Active Directory level \[internal intruder\]
 
 Coming soon

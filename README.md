@@ -140,7 +140,7 @@ The password spraying attack is more realistic because if used correctly, it doe
 
 Using a small analytics script `auth-anal.py` and python's built-in math capabilities we can build simple analytics. And let’s say, based on the surge in blocking at night, we can conclude that someone was guessing the passwords:
 
-<img alt="auth.py" src="img/ad-auth-anal.png">
+<img alt="auth-anal.py" src="img/ad-auth-anal.png">
 
 An excellent marker that someone is brute-forceing your accounts is blocking the `Administrator` or the “wrong password” of the `Guest` user. You can also monitor an account that is not used by anyone, any authentication event for which can be considered an anomaly. And it is for these events that the `auth.py` script performs customized notification - `email`, `sms`, `telegram`.
 

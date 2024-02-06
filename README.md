@@ -113,7 +113,37 @@ And from the passwords we select, we can quickly understand that one or another 
 
 ## Active Directory level \[internal intruder\]
 
-Coming soon
+If the attacker moved undetected to the Active Directory level, then we lost the first round. Now he faces a dozen other actual privilege escalation attacks, some of which are quite silent. But we still have a chance to see some characteristic features, it’s just important to know what to look for.
+There are a couple of tricks that allow you to see attacks in the Active Directory environment, and any domain user can do them.
+
+### ad/auth.py
+
+Absolutely any domain user can request via LDAP a list of objects whose special attributes - timestamps - have changed. By tracking changes in the `lastLogon` attribute, you can see the dynamics of successful authentications, the `badPasswordTime` attribute - false authentications, and `lockoutTime` - the dynamics of locks. And all this means that any domain user is able to see the activity of all users and, therefore, see password attacks on a domain-wide scale.
+
+<table border="0">
+ <tr>
+    <td><img alt="nessus" src="img/ad-nessus.png"></td>
+    <td><img alt="auth.py" src="img/ad-auth.png"></td>
+ </tr>
+</table>
+
+Direct brute force of domain accounts is very rare and is more likely to be the result of careless attacks. If we see clearly dictionary passwords, then these are most likely echoes of an attack on your external network perimeter (administrator, guest, testuser, test1). But if these are usernames unique to your company (joe.smith, jane.smith), which could only be recognized while inside, then this is already a marker of an internal violator.
+
+The password spraying attack is more realistic because if used correctly, it does not cause blocking. But it will be perfectly visible to us:
+
+<table border="0">
+ <tr>
+    <td><img alt="cme" src="img/ad-cme.png"></td>
+    <td><img alt="auth.py" src="img/ad-auth2.png"></td>
+ </tr>
+</table>
+
+Using a small analytics script `auth-anal.py` and python's built-in math capabilities we can build simple analytics. And let’s say, based on the surge in blocking at night, we can conclude that someone was guessing the passwords:
+
+<img alt="auth.py" src="img/ad-auth-anal.png">
+
+An excellent marker that someone is brute-forceing your accounts is blocking the `Administrator` or the “wrong password” of the `Guest` user. You can also monitor an account that is not used by anyone, any authentication event for which can be considered an anomaly. And it is for these events that the `auth.py` script performs customized notification - `email`, `sms`, `telegram`.
+
 
 ## Wi-Fi level \[external intruder\]
 

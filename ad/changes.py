@@ -79,7 +79,6 @@ def snapshot():
 	conn.search(root, '(objectClass=*)', SUBTREE, attributes=ALL_ATTRIBUTES, controls=security_descriptor_control(sdflags=0x05)) # with ACL
 	#conn.search(root, '(|(objectClass=pKICertificateTemplate)(objectClass=certificationAuthority))', SUBTREE, attributes=ALL_ATTRIBUTES, controls=security_descriptor_control(sdflags=0x05)) # with ACL
 	#conn.search(root, '(objectClass=user)', SUBTREE, attributes=ALL_ATTRIBUTES, controls=security_descriptor_control(sdflags=0x05))
-	#conn.search(root, '(sAMAccountName=azhukov)', SUBTREE, attributes=ALL_ATTRIBUTES, controls=security_descriptor_control(sdflags=0x05))
 	for result in conn.entries:
 		dn = result.entry_dn
 		objects[dn] = result.entry_attributes_as_dict

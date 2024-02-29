@@ -214,4 +214,22 @@ Just one script, which we will continue to see in almost all attacks, can become
 
 ## Wi-Fi level \[external intruder\]
 
-Coming soon
+Let's assume that the hacker still did not get into your local network and everything that was described earlier did not happen to you. But he can still get through there with physical attacks, being near your offices.
+Wireless networks are the first thing an external intruder will encounter, even if he has not yet managed to get close enough to you. Wi-Fi is an extremely common technology, susceptible to a wide variety of known attacks and, importantly, having sufficient ease of implementation. All this makes attacks on your wireless networks very real. Do not underestimate this attack surface, which is actually much more promising for a sufficiently motivated external attacker than your Internet perimeter.
+If we talk about protecting wireless networks, then in information security it is usually customary to only give recommendations on secure configuration. While the attacks themselves are considered to be quite silent. Although certain Wireless IDS solutions exist, most of which are academic hacks, they are extremely rare in our time. And it turns out to be a rather interesting situation: we have two perimeters: one in the digital space, protected by all sorts of WAFs, SOCs and other IDS/IPS, and in the real world - wireless networks that almost always go beyond the controlled area and in no way at all are not really protected.
+And therefore, our task will be to try to identify various current attacks only by listening to the radio broadcast.
+As already mentioned, it is believed that most attacks on wireless networks are silent and invisible. However, almost all of them have their own characteristics by which we will calculate them.
+
+### wifi/deauth.py
+
+Deauthentication. Any hacker, young or old, who wants to infiltrate you will be located near your office and send out deauthentication packets. The attack is used on `WPA PSK` networks (the most common today) and consists of simultaneously disconnecting the access point and clients from each other. This is achieved by sending special packets in both directions from the names of both parties at once. This causes the client, which did not actually intend to disconnect from the access point, to resend the password hash (handshake) in a second `EAPOL` message. For a hacker, a handshake is of great interest, because it can be used to carry out a password guessing attack using a dictionary at fairly high speeds (millions per second). However, by listening to the radio air we can easily detect such attacks by sending deauthentication packets from two sides at once:
+
+<table border="0">
+ <tr>
+    <td><img alt="bettercap deauth" src="img/wifi-bettercap_deauth.jpg"></td>
+    <td><img alt="deauth.py" src="img/wifi-deauth.png"></td>
+ </tr>
+</table>
+
+The signal level will even allow us to understand how close the hacker is to us and -30dBm means that he is actually opposite you.
+

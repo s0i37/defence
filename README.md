@@ -151,30 +151,30 @@ This is quite possible and all you need is to be a simple domain user.
 Almost any change to anything in an AD object, including ACL modification, changes the whenChanged attribute, by which we can request changed objects in a loop.
 
 As attacks develop in the Active Directory infrastructure, various misconfigurations of access rights are often discovered, as well as relay attacks that allow actions to be performed on behalf of another account. Ultimately, this allows attackers to perform many dangerous actions.
-An example of a neat and silent attack on a `user` object is to add a servicePrincipalName attribute to it and use a TargetedKerberoasting attack to obtain the user's password hash - and we see this attack to create and delete SPN:
+An example of a neat and silent attack on a `user` object is to add a `servicePrincipalName` attribute to it and use a `TargetedKerberoasting` attack to obtain the user's password hash - and we see this attack to create and delete SPN:
 
 <table border="0">
  <tr>
-    <td><img alt="cme" src="img/ad-targeted_kerberoasting.png"></td>
-    <td><img alt="auth.py" src="img/ad-changes.png"></td>
+    <td><img alt="Targeted Kerberoasting" src="img/ad-targeted_kerberoasting.png"></td>
+    <td><img alt="changes.py" src="img/ad-changes.png"></td>
  </tr>
 </table>
 
-If the attacker has write rights to the `computer` account object, then he can use the RBCD or ShadowCredentials technique to seize access to the victim’s PC. This can be seen by the appearance of the specific attribute msDS-AllowedToActOnBehalfOfOtherIdentity/msDs-KeyCredentialLink:
+If the attacker has write rights to the `computer` account object, then he can use the `RBCD` or `ShadowCredentials` technique to seize access to the victim’s PC. This can be seen by the appearance of the specific attribute `msDS-AllowedToActOnBehalfOfOtherIdentity`/`msDs-KeyCredentialLink`:
 
 <table border="0">
  <tr>
-    <td><img alt="cme" src="img/ad-rbcd.png"></td>
-    <td><img alt="auth.py" src="img/ad-changes2.png"></td>
+    <td><img alt="RBCD" src="img/ad-rbcd.png"></td>
+    <td><img alt="changes.py" src="img/ad-changes2.png"></td>
  </tr>
 </table>
 
-Finally, attention should also be paid to `group policy objects`. Compromise of this object can have a catastrophic impact if many PCs fall under the group. The most valuable thing in Group Policy is the gPCFileSysPath attribute, which points to the folder in which an executable script or registry hive can be stored. The redirect attempt can be detected by the corresponding attribute:
+Finally, attention should also be paid to `group policy objects`. Compromise of this object can have a catastrophic impact if many PCs fall under the group. The most valuable thing in Group Policy is the `gPCFileSysPath` attribute, which points to the folder in which an executable script or registry hive can be stored. The redirect attempt can be detected by the corresponding attribute:
 
 <table border="0">
  <tr>
-    <td><img alt="cme" src="img/ad-gpo_attack.png"></td>
-    <td><img alt="auth.py" src="img/ad-changes3.png"></td>
+    <td><img alt="gpo attack" src="img/ad-gpo_attack.png"></td>
+    <td><img alt="changes.py" src="img/ad-changes3.png"></td>
  </tr>
 </table>
 
@@ -182,32 +182,32 @@ If an attacker has gained access to a particular `group` that is of interest to 
 
 <table border="0">
  <tr>
-    <td><img alt="cme" src="img/ad-group_add.png"></td>
-    <td><img alt="auth.py" src="img/ad-changes4.png"></td>
+    <td><img alt="group add" src="img/ad-group_add.png"></td>
+    <td><img alt="changes.py" src="img/ad-changes4.png"></td>
  </tr>
 </table>
 
-ACL attacks are perhaps an even more subtle threat. Almost everything that was shown above can be a consequence of the development of misconfigurations of access rights (ACL). Well identified with the help of Bloodhound, they are often reliable, invisible paths leading a simple domain user to the kings - to the domain administrator. But are ACL modifications so invisible? In fact, even the slightest change in rights leads to an implicit change in the whenChanged attribute, which means our method will work here too.
-If you have the appropriate rights (GENERIC_ALL, WRITE_OWNER), an insider can `change the owner` of an object. As soon as this happens, the object’s `nTSecurityDescriptor` attribute changes, which stores all information about the rights to this object. Despite the fact that the information in it is presented in binary form, the `changes.py` script can parse its structure to its canonical form. And in this example we immediately see what happened:
+ACL attacks are perhaps an even more subtle threat. Almost everything that was shown above can be a consequence of the development of misconfigurations of access rights (`ACL`). Well identified with the help of Bloodhound, they are often reliable, invisible paths leading a simple domain user to the kings - to the domain administrator. But are ACL modifications so invisible? In fact, even the slightest change in rights leads to an implicit change in the whenChanged attribute, which means our method will work here too.
+If you have the appropriate rights (`GENERIC_ALL`, `WRITE_OWNER`), an insider can `change the owner` of an object. As soon as this happens, the object’s `nTSecurityDescriptor` attribute changes, which stores all information about the rights to this object. Despite the fact that the information in it is presented in binary form, the `changes.py` script can parse its structure to its canonical form. And in this example we immediately see what happened:
 
 <table border="0">
  <tr>
-    <td><img alt="cme" src="img/ad-acl_change_owner.png"></td>
-    <td><img alt="auth.py" src="img/ad-changes5.png"></td>
+    <td><img alt="change owner" src="img/ad-acl_change_owner.png"></td>
+    <td><img alt="changes.py" src="img/ad-changes5.png"></td>
  </tr>
 </table>
 
 But the attack rarely stops there and most likely something else must happen. Let's look further.
-If an internal attacker discovers that he has rights to some object that allow him to `change permissions`, he can assign an arbitrary right. More often these are simply full rights to the object (GENERIC_ALL). This case shows how an insider adds an ACE with the mask GENERIC_ALL (full control). What we see:
+If an internal attacker discovers that he has rights to some object that allow him to `change permissions`, he can assign an arbitrary right. More often these are simply full rights to the object (`GENERIC_ALL`). This case shows how an insider adds an `ACE` with the mask `GENERIC_ALL` (full control). What we see:
 
 <table border="0">
  <tr>
-    <td><img alt="cme" src="img/ad-acl_generic_all.png"></td>
-    <td><img alt="auth.py" src="img/ad-changes6.png"></td>
+    <td><img alt="GENERIC_ALL" src="img/ad-acl_generic_all.png"></td>
+    <td><img alt="changes.py" src="img/ad-changes6.png"></td>
  </tr>
 </table>
 
-In real infrastructures, the path from the user to the domain administrator can be very thorny, and I would recommend paying attention to changing the ACL of any object where GENERIC_ALL and WRITE_DACL occur, since they each have the strongest impact in their own situation.
+In real infrastructures, the path from the user to the domain administrator can be very thorny, and I would recommend paying attention to changing the ACL of any object where `GENERIC_ALL` and `WRITE_DACL` occur, since they each have the strongest impact in their own situation.
 
 The `changes.py` script, in just 100+ lines of code, is able, under any even non-privileged domain account, to see in real time which objects were created, deleted or changed. Show exactly which attributes have changed in them, including analysis of the ACL to a canonical, human-readable form.
 Just one script, which we will continue to see in almost all attacks, can become an almost universal tool for monitoring Active Directory.

@@ -7,6 +7,7 @@ from os import system
 
 targets = []
 conf.verb = 0
+TIMEOUT = 1
 
 alerts = []
 def alert(ip, distance_old, distance_new):
@@ -20,13 +21,13 @@ def alert(ip, distance_old, distance_new):
 	alerts.append(ip)
 
 def probe_ttl(ip):
-	answer = sr1(IP(dst=ip)/ICMP())
+	answer = sr1(IP(dst=ip)/ICMP(), timeout=TIMEOUT)
 	if answer:
 		return answer[IP].ttl
 
 def probe_traceroute(ip):
 	trace = []
-	for hop in traceroute(IP(dst=ip)/ICMP()):
+	for hop in traceroute(ip, l4=ICMP(), timeout=TIMEOUT):
 		req,res = hop
 		trace.append(res[IP].src)
 	return "->".join(trace)

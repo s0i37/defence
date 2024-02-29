@@ -25,6 +25,8 @@ ATTACKS = { # notifications
 	"GPO attack": {"attr": "^gpcfilesyspath$", "dn": ".*"},
 	"user object abuse": {"attr": "^scriptpath$", "dn": ".*"},
 	"ACL attack": {"attr": ".*generic_all.*", "dn": ".*"},
+	"sAMAccountName spoofing": {"attr": "^samaccountname$", "dn": ".*"},
+	"dNSHostName spoofing": {"attr": "^dnshostname$", "dn": ".*"},
 	"ADCS attack authorities": {"attr": ".*", "dn": ".*CN=Certification Authorities,.*"},
 	"ADCS attack templates": {"attr": ".*", "dn": ".*CN=Certificate Templates,.*"}
 }
@@ -42,8 +44,8 @@ def alert(dn, attr, value, message):
 	if (dn,attr) in alerts:
 		return
 	print("[!] Danger changes detected: %s: %s=%s (%s)" % (dn, attr, value, message))
-	system("mplayer /home/soier/.music/sounds/StarCraft/usunaleskanal.wav >/dev/null 2>/dev/null &")                                                                  
-	system("zenity --warning --title='Danger changes detected' --text='%s: %s=%s (%s)' &" % (dn, attr, value, message))                                                                       
+	system("mplayer /home/soier/.music/sounds/StarCraft/usunaleskanal.wav >/dev/null 2>/dev/null &")
+	system("zenity --warning --title='Danger changes detected' --text='%s: %s=%s (%s)' &" % (dn, attr, value, message))
 	#system("echo 'Danger changes detected' | festival --tts --language english")
 	alerts.append((dn,attr))
 

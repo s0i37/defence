@@ -245,7 +245,7 @@ Specialized software such as `hcxdumptool` or `bettercap`, in order to avoid cap
  </tr>
 </table>
 
-### wifi/brute.py
+### wifi/bruteforce.py
 
 If the hacker failed to succeed with the two previous attacks - capturing `handshake` and `PMKID`, which are the most common attacks on WPA PSK, then he can go further. Even if the hacker has a WPA network without a client and without PMKID, it is not protected if its password is 12345678. And the hacker can always pick up the password online - each time asking the password from the access point itself. In addition, he can do this from absolutely any phone, without raising any suspicions.
 By monitoring the radio broadcast, we can distinguish successful authentication attempts from unsuccessful ones by sending an `EAPOL M3` packet by the access point. And such a simple check allows us to see the online brute force of the access point.
@@ -257,7 +257,7 @@ By monitoring the radio broadcast, we can distinguish successful authentication 
  </tr>
 </table>
 
-Often, medium and large companies can have multiple wireless networks. In addition to official access points, there can also be secondary ones (technological, service, test). Finally, wireless printer networks can also become a point of penetration. In turn, their network names may not clearly indicate their affiliation with the company. An experienced hacker, understanding this, is forced to attack all audible wireless networks, making a brute-force attack on a wide range of targets. Such an anomaly is easy to notice, and the `brute.py` script copes with this perfectly.
+Often, medium and large companies can have multiple wireless networks. In addition to official access points, there can also be secondary ones (technological, service, test). Finally, wireless printer networks can also become a point of penetration. In turn, their network names may not clearly indicate their affiliation with the company. An experienced hacker, understanding this, is forced to attack all audible wireless networks, making a brute-force attack on a wide range of targets. Such an anomaly is easy to notice, and the `bruteforce.py` script copes with this perfectly.
 
 <table border="0">
  <tr>
@@ -265,3 +265,23 @@ Often, medium and large companies can have multiple wireless networks. In additi
     <td><img alt="brute.py" src="img/wifi-brute2.png"></td>
  </tr>
 </table>
+
+### wifi/wps.py
+
+Soon.
+
+### wifi/eviltwin.py
+
+As Kevin Mitnick said, a person is the most vulnerable link in any system. Hackers of all stripes love this attack, because it is aimed at human weakness. And such an attack will always be relevant. Novice hackers can start with this attack right away, and more experienced ones, only if all previous ones have failed.
+A hacker can simply launch a wireless open network with a name identical to the network being attacked. Implement his `captive portal` and lure certain data from the victim who connects to it.
+It is quite easy to detect such an attack. We simply monitor all `WPA` networks and compare whether there is a similar `OPN` network.
+The presence of two identical networks with different authentication parameters is an anomaly, because wireless clients cannot remember two different networks with the same name. This is a clear sign of an `EvilTwin` attack.
+
+<table border="0">
+ <tr>
+    <td><img alt="wifiphisher" src="img/wifi-wifiphisher.jpg"></td>
+    <td><img alt="eviltwin.py" src="img/wifi-eviltwin.png"></td>
+ </tr>
+</table>
+
+Since this attack belongs to the `Roque AP` class, the script records all `uptime` and `vendors`. An extremely low uptime confirms that the wireless network was just turned on by the hacker.

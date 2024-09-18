@@ -244,3 +244,24 @@ Specialized software such as `hcxdumptool` or `bettercap`, in order to avoid cap
     <td><img alt="pmkid.py" src="img/wifi-pmkid.png"></td>
  </tr>
 </table>
+
+### wifi/brute.py
+
+If the hacker failed to succeed with the two previous attacks - capturing `handshake` and `PMKID`, which are the most common attacks on WPA PSK, then he can go further. Even if the hacker has a WPA network without a client and without PMKID, it is not protected if its password is 12345678. And the hacker can always pick up the password online - each time asking the password from the access point itself. In addition, he can do this from absolutely any phone, without raising any suspicions.
+By monitoring the radio broadcast, we can distinguish successful authentication attempts from unsuccessful ones by sending an `EAPOL M3` packet by the access point. And such a simple check allows us to see the online brute force of the access point.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute depth" src="img/wifi-bruteforce_depth.jpg"></td>
+    <td><img alt="brute.py" src="img/wifi-brute.png"></td>
+ </tr>
+</table>
+
+Often, medium and large companies can have multiple wireless networks. In addition to official access points, there can also be secondary ones (technological, service, test). Finally, wireless printer networks can also become a point of penetration. In turn, their network names may not clearly indicate their affiliation with the company. An experienced hacker, understanding this, is forced to attack all audible wireless networks, making a brute-force attack on a wide range of targets. Such an anomaly is easy to notice, and the `brute.py` script copes with this perfectly.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute width" src="img/wifi-bruteforce_width.png"></td>
+    <td><img alt="brute.py" src="img/wifi-brute2.png"></td>
+ </tr>
+</table>

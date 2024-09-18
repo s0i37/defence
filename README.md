@@ -343,3 +343,19 @@ Finally, the pure KARMA attack is used in `hostapd-mana`, a specially modified t
     <td><img alt="karma.py" src="img/wifi-karma.png"></td>
  </tr>
 </table>
+
+## POST
+
+Finally, what to do if the hacker has achieved his goal and managed to penetrate the system? Then make his life at least a little more difficult.
+If a hacker gets to your computer, then most likely he will only be interested in your password. And you as a user can come up with any password, even if it contains wildcards and the use of dangerous commands. Thus, it is in your power to make `RCE` in a hacker machine.
+
+<table border="0">
+ <tr>
+    <td><img alt="mimikatz" src="img/post-mimikatz.jpg"></td>
+    <td><img alt="cme" src="img/post-cme.jpg"></td>
+ </tr>
+</table>
+
+
+According to a survey conducted among hackers, pentesters and IT specialists, 21% incorrectly entered the password in the command line, killing their `Kali` during a `password reuse attack`. A simple recommendation was able to stop 1 hacker out of 5.
+There is no guarantee whether it will work or not, but it will definitely not make your password weaker =)

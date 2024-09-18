@@ -233,3 +233,14 @@ Deauthentication. Any hacker, young or old, who wants to infiltrate you will be 
 
 The signal level will even allow us to understand how close the hacker is to us and -30dBm means that he is actually opposite you.
 
+### wifi/pmkid.py
+
+Corporate wireless networks often use multiple access points with identical names to cover a large area. This creates a seamless transition for employees when they move from one access point's service area to another. On such access points, the first `EAPOL M1` message often contains a `PMKID` hash during authentication, which is almost the same as a `handshake`. Hackers really like this attack for its speed, because the hash comes from the access point itself, which makes it possible to capture the hash and guess the password without interacting with its clients. In addition, this attack is considered to be quite silent, because it does not cause negative consequences. However, there is a peculiarity in its implementation...
+Specialized software such as `hcxdumptool` or `bettercap`, in order to avoid capturing an unwanted `EAPOL M2` packet, do not send it as soon as an `EAPOL M1` arrives from the access point. And this is not typical for a legitimate client. This is because otherwise the hacker will capture two different hashes at once, and for example `aircrack-ng` cannot bruteforce `PMKID` in the presence of `EAPOL M2`. This is how this attack can be detected.
+
+<table border="0">
+ <tr>
+    <td><img alt="bettercap auth" src="img/wifi-bettercap_auth.jpg"></td>
+    <td><img alt="pmkid.py" src="img/wifi-pmkid.png"></td>
+ </tr>
+</table>

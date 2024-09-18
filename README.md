@@ -301,3 +301,45 @@ It is the first most insecure `GTC` method that is the marker for detecting this
 </table>
 
 In addition to the low `uptime`, we can see the `vendor` characteristic of hacker Wi-Fi adapters, as well as the signal level, indicating that the hacker is somewhere nearby.
+
+### wifi/karma.py
+
+Detection of the `KARMA` technique will finally finish off wireless hackers. After all, this technique is found explicitly and implicitly in almost all hacker tools. And somewhere it is default, which only increases the chances of detection.
+The KARMA technique is used to attract clients by sending them spoofed `Probe Response` packets. Using Probe packets is an alternative way to search for wireless networks, usually used for energy saving purposes. This technique allows hacker to connect many clients, regardless of the name of the wireless network.
+In some ways, this attack resembles `responder` and its effective detection can be performed in the same simple way. We periodically send `Probe Request` on the radio with a random non-existent name. A legitimate access point will never respond to such a packet. But the essence of the KARMA attack is to respond to all such requests, which is how a specialized hacker access point gives itself away.
+
+The `hcxdumptool` utility activates the KARMA technique by default. And if a hacker wanted to collect a `handshake` or `PMKID`, he gave himself away with this technique.
+
+<table border="0">
+ <tr>
+    <td><img alt="hcxdumptool" src="img/wifi-hcxdumptool.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+If a hacker tried to attack a WPA EAP network using `eaphammer`, he would also get caught, because KARMA is also used there by default.
+
+<table border="0">
+ <tr>
+    <td><img alt="eaphammer" src="img/wifi-eaphammer2.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+If a hacker performs an `EvilTwin` attack using `wifiphisher`, there will be an instant detection, because here too KARMA is used by default.
+
+<table border="0">
+ <tr>
+    <td><img alt="wifiphisher" src="img/wifi-wifiphisher2.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+Finally, the pure KARMA attack is used in `hostapd-mana`, a specially modified tool of the same name. And again - detection.
+
+<table border="0">
+ <tr>
+    <td><img alt="hostapd_mana" src="img/wifi-hostapd_mana.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>

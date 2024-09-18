@@ -285,3 +285,19 @@ The presence of two identical networks with different authentication parameters 
 </table>
 
 Since this attack belongs to the `Roque AP` class, the script records all `uptime` and `vendors`. An extremely low uptime confirms that the wireless network was just turned on by the hacker.
+
+### wifi/eap.py
+
+Typically, companies use `WPA Enterprise` networks, where each client has their own personal login and password.
+WPA Enterprise wireless networks use a separate authentication server and support multiple methods of accepting credentials from the client. And some of them are so insecure that they can force the client to send the password in plain text or as a hash. A hacker can simply launch a wireless network identical to the legitimate one and activate the most insecure authentication methods.
+For a legitimate network, the order of proposed authentication methods is from the most secure to the least. But for a hacker's wireless network - vice versa. This is the essence of the `GTC downgrade` attack.
+It is the first most insecure `GTC` method that is the marker for detecting this attack. The script monitors only WPA EAP networks and authenticates on each newly heard one to check the authentication methods. And as soon as a hacker nearby launches `eaphammer`, we immediately detect it.
+
+<table border="0">
+ <tr>
+    <td><img alt="eaphammer" src="img/wifi-eaphammer.jpg"></td>
+    <td><img alt="eap.py" src="img/wifi-eap.png"></td>
+ </tr>
+</table>
+
+In addition to the low `uptime`, we can see the `vendor` characteristic of hacker Wi-Fi adapters, as well as the signal level, indicating that the hacker is somewhere nearby.

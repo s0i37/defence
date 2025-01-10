@@ -268,7 +268,23 @@ Often, medium and large companies can have multiple wireless networks. In additi
 
 ### wifi/wps.py
 
-Soon.
+WPS allows you to connect to a WPA PSK network in a simpler way - by entering an 8-digit numeric code. This technology has 4 vulnerabilities. The first vulnerability occurs in WPS v1 and consists of the lack of blocking on trying the entire range of PIN codes (11,000 combinations). By tracking EAPOL messages, the `wps.py` script lets us know when an attacker is brute-forcing WPS, when he has picked up the first half, and finally, when he has guessed the code.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute pin depth" src="img/wifi-reaver.jpg"></td>
+    <td><img alt="wps.py" src="img/wifi-wps_brute.png"></td>
+ </tr>
+</table>
+
+The last three vulnerabilities allow guessing the PIN code without a full search of the entire range due to weak cryptography in the access point, predictability of the PIN code based on the MAC address, or the use of an empty PIN code. And since exploitation no longer requires much time, an attacker can check these vulnerabilities on all audible access points. The `wps.py` script tracks such anomalies if the same client tried to search the PIN code on multiple access points at once.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute pin width" src="img/wifi-pixiedust.jpg"></td>
+    <td><img alt="wps.py" src="img/wifi-wps_brute2.png"></td>
+ </tr>
+</table>
 
 ### wifi/eviltwin.py
 

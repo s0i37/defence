@@ -27,7 +27,7 @@ def probe_ttl(ip):
 
 def probe_traceroute(ip):
 	trace = []
-	for hop in traceroute(ip, l4=ICMP(), timeout=TIMEOUT):
+	for hop in traceroute(ip, l4=ICMP(), timeout=TIMEOUT)[0]:
 		req,res = hop
 		trace.append(res[IP].src)
 	return "->".join(trace)

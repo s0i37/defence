@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
-from scapy.all import *
+from scapy.all import * # scapy==2.4.5
 from threading import Thread
 from random import random
 from string import ascii_uppercase

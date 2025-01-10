@@ -15,6 +15,8 @@ USERS = { # notifications
 	'fail': ['guest', 'security', 'audit', 'testuser', 'test1'],
 	'lock': ['administrator', 'guest', 'security', 'audit', 'testuser', 'test1']
 }
+MAX_LOCKS = 50
+MAX_FAILS = 100
 
 server = Server(dc, get_info=ALL)
 Connection(server, auto_bind=True)
@@ -37,8 +39,10 @@ def alert(user, action):
 	#system("echo 'Auth event detected' | festival --tts --language english")
 	alerts.append(user)
 
-users_failure = {}
-users_success = {}
+failures_time = {}
+success_time = {}
+fails = set()
+locks = set()
 timestamp = (int(datetime.strptime(server_time, "%Y%m%d%H%M%S.0Z").timestamp() if server_time else datetime.utcnow().timestamp()) + 11644473600) * 10000000
 while True:
 	conn.search(root, '(&(objectCategory=person)(objectClass=user)(|(badPasswordTime>={timestamp})(lastLogon>={timestamp})))'.format(timestamp=timestamp), SUBTREE, attributes=["sAMAccountName", "badPasswordTime", "lastLogon", "badPwdCount", "lockoutTime"])
@@ -47,13 +51,13 @@ while True:
 		dn = result.entry_dn
 		if result['sAMAccountName']:
 			user = result['sAMAccountName'].value
-			if user == 'incident':
+			if user.lower() in ('incident',):
 				continue
 			auth_failure_count = ""
 			if result['badPwdCount']:
 				auth_failure_count = int(result['badPwdCount'].value)
 			if result['badPasswordTime']:
-				if user in users_failure and users_failure[user] < result['badPasswordTime'].value.timestamp():
+				if user in failures_time and failures_time[user] < result['badPasswordTime'].value.timestamp():
 					print('[{now}]{red} "{user}" auth failure ({auth_failure_count}){reset}'.format(now=datetime.now().strftime("%d.%m.%Y %H:%M:%S"), badPasswordTime=result["badPasswordTime"].value.strftime("%d.%m.%Y %H:%M:%S"), red=Fore.RED, user=user, auth_failure_count=auth_failure_count, reset=Fore.RESET))
 					if user.lower() in USERS['fail']:
 						alert(user, 'failure')
@@ -62,13 +66,21 @@ while True:
 						print('[{now}]{red} "{user}" locked{reset}'.format(now=datetime.now().strftime("%d.%m.%Y %H:%M:%S"), red=Fore.LIGHTRED_EX, user=user, reset=Fore.RESET))
 						if user.lower() in USERS['lock']:
 							alert(user, 'locked')
-				users_failure[user] = result['badPasswordTime'].value.timestamp()
+						locks.add(user)
+					fails.add(user)
+				failures_time[user] = result['badPasswordTime'].value.timestamp()
 			if result['lastLogon']:
-				if user in users_success and users_success[user] < result['lastLogon'].value.timestamp():
+				if user in success_time and success_time[user] < result['lastLogon'].value.timestamp():
 					print('[{now}]{green} "{user}" auth success{reset}'.format(now=datetime.now().strftime("%d.%m.%Y %H:%M:%S"), lastLogon=result["lastLogon"].value.strftime("%d.%m.%Y %H:%M:%S"), green=Fore.GREEN, user=user, reset=Fore.RESET))
 					lasts.append((result['lastLogon'].value.timestamp() + 11644473600) * 10000000)
 					if user.lower() in USERS['auth']:
 						alert(user, 'auth')
-				users_success[user] = result['lastLogon'].value.timestamp()
+				if user in locks: locks.remove(user)
+				if user in fails: fails.remove(user)
+				success_time[user] = result['lastLogon'].value.timestamp()
+	if len(locks) > MAX_LOCKS:
+		alert("mass locks users", str(len(locks)))
+	if len(fails) > MAX_FAILS:
+		alert("mass fails users", str(len(fails)))
 	timestamp = int(max(lasts) + 1)
 	sleep(1)

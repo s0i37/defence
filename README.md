@@ -2,6 +2,16 @@
 Simple technical techniques that allow you to detect intruders at different stages.
 All the techniques presented do not require exclusive rights and can be performed by an ordinary employee - everyone can protect their company.
 
+## Network level \[external intruder\]
+The attacker has not yet managed to penetrate your network. While he and you are separated by thousands of kilometers and dozens of hops. The hacker does not yet know anything about your perimeter and is only going to conduct active reconnaissance - port scanning. His goal is to detect open ports and identify services. We can use the database of the very program he uses to scan (nmap) and see what protocols he is trying to search for. The `services.py` script does this work. It listens to the specified network port (TCP or UDP) and shows what the received data buffer most closely resembles:
+
+<img alt="services" src="img/services.png">
+
+Sending something unusual to a listening port is evidence of active reconnaissance by a hacker. However, the Internet is a very hostile network and in reality we will receive random packets almost every second from different corners of the planet. And most of the activity does not come from hackers, but from simple bots.
+
+## Application level \[external intruder\]
+[soon]
+
 ## Network level \[internal intruder\]
 The attacker has just penetrated your corporate network. He doesn't have an account yet and knows almost nothing about your network. His actions will be largely random. It is very important to catch the attacker at this early stage.
 

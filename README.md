@@ -3,13 +3,38 @@ Simple technical techniques that allow you to detect intruders at different stag
 All the techniques presented do not require exclusive rights and can be performed by an ordinary employee - everyone can protect their company.
 
 ## Network level \[external intruder\]
-The attacker has not yet managed to penetrate your network. While he and you are separated by thousands of kilometers and dozens of hops. The hacker does not yet know anything about your perimeter and is only going to conduct active reconnaissance - port scanning. His goal is to detect open ports and identify services. We can use the database of the very program he uses to scan (nmap) and see what protocols he is trying to search for. The `services.py` script does this work. It listens to the specified network port (TCP or UDP) and shows what the received data buffer most closely resembles:
+The attacker has not yet managed to penetrate your network. While he and you are separated by thousands of kilometers and dozens of hops.
 
-<img alt="services" src="img/services.png">
+Detection tricks.
+
+### proto.py
+
+The hacker does not yet know anything about your perimeter and is only going to conduct active reconnaissance - port scanning. His goal is to detect open ports and identify services. We can use the database of the very program he uses to scan (nmap) and see what protocols he is trying to search for. The `proto.py` script does this work. It listens to the specified network port (TCP or UDP) and shows what the received data buffer most closely resembles:
+
+<img alt="proto" src="img/proto.png">
 
 Sending something unusual to a listening port is evidence of active reconnaissance by a hacker. However, the Internet is a very hostile network and in reality we will receive random packets almost every second from different corners of the planet. And most of the activity does not come from hackers, but from simple bots.
 
-## Application level \[external intruder\]
+### ip_id.py
+The TCP/IP network stack that connects the attacker to his target has several notable features that can be used to create a picture of the source of the attack - where and how it comes from. So in the IP layer of the network packet there is an ID field, which in most operating systems has a global incremental nature. In other words, the hacker's computer, sending network packets to its targets, will increase this field by one. By analyzing this field in the packets received from the hacker, we can see how many packets he sends somewhere else besides us. In other words, we can conclude whether the attack is targeted or fanned out to many hosts.
+
+<img alt="ip_id" src="img/ip_id.png">
+
+In this example, it is clear that the first traffic source has a weak increment, indicating that it sends packets to practically no one except our node - this indicates a likely targeted attack. The second node, in addition to us, manages to send from several hundred to a thousand packets - this indicates a likely fan attack on many nodes at once.
+
+### nat.py
+[soon]
+
+### uptime.py
+[soon]
+
+### services.py
+[soon]
+
+### garbage.py
+[soon]
+
+### zip_bomb.py
 [soon]
 
 ## Network level \[internal intruder\]
@@ -89,6 +114,9 @@ Application - only the current network segment.
  </tr>
 </table>
 
+### relay.py
+[soon]
+
 ### honeypot/smb/ms17-010.sh
 
 Once on the internal network, advanced attackers look for so-called “low-hanging fruit” - vulnerabilities that are frequently encountered, easily exploited and have the highest impact. And perhaps the champion here is MS17-010. Checkers for this vulnerability are everywhere: in scanners like `nessus`, exploit packs like `metasploit`, and of course everyone’s favorite `nmap`.
@@ -120,6 +148,22 @@ Based on the results of port scanning, it will certainly be included in the list
 </table>
 
 And from the passwords we select, we can quickly understand that one or another dictionary was used.
+
+### honeypot/postgresql/auth.py
+
+[soon]
+
+### honeypot/mssql/auth.py
+
+[soon]
+
+### honeypot/rdp/auth.py
+
+[soon]
+
+## relay.py
+
+[soon]
 
 ## Active Directory level \[internal intruder\]
 
@@ -221,6 +265,15 @@ In real infrastructures, the path from the user to the domain administrator can 
 
 The `changes.py` script, in just 100+ lines of code, is able, under any even non-privileged domain account, to see in real time which objects were created, deleted or changed. Show exactly which attributes have changed in them, including analysis of the ACL to a canonical, human-readable form.
 Just one script, which we will continue to see in almost all attacks, can become an almost universal tool for monitoring Active Directory.
+
+### ad/deception.py
+
+[soon]
+
+```
+echo $[(`date +"%s" -d '2020-12-31 06:00:00'` + 11644473600) * 10000000]
+(&(objectCategory=person)(objectClass=user)(lastLogon>=133124328000000000))
+```
 
 ## Wi-Fi level \[external intruder\]
 

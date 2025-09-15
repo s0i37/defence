@@ -23,7 +23,12 @@ The TCP/IP network stack that connects the attacker to his target has several no
 In this example, it is clear that the first traffic source has a weak increment, indicating that it sends packets to practically no one except our node - this indicates a likely targeted attack. The second node, in addition to us, manages to send from several hundred to a thousand packets - this indicates a likely fan attack on many nodes at once.
 
 ### nat.py
-[soon]
+
+Each network packet in the IP layer has a TTL field, which decreases by 1 each time the packet passes through a network device (switch). Thus, by analyzing the value of this field in the packets received from the hacker, we can conclude how far he is from us. But we can also conclude from this field where exactly the hacker is located - on a node with a white IP (dedicated server) or behind a NAT or VPN (workstation). To do this, you need to send a ping request to the traffic source and compare the difference in IP.TTL for incoming and outgoing packets. If the packet towards us has traveled a longer distance (its TTL has decreased more), then the IP address of the traffic source is not the actual address of the hacker, but is only a NAT gateway or VPN. If the distance there and back match, then this IP address is the true source of traffic.
+
+<img alt="nat" src="img/nat.png">
+
+If the traffic source is located in a local network, we can see how deep it is by IP.TTL and, accordingly, roughly judge the size of the local network. Often, malicious activity from the depths of local networks is not a deliberate attack, but is a consequence of a virus infection of one of the PCs of some company and an attempt to spread.
 
 ### uptime.py
 [soon]

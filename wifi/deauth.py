@@ -18,6 +18,7 @@ def alert(src, dst, signal, essid):
 	#system("echo 'WPA handshake deauth detected' | festival --tts --language english")
 	alerts.append(src)
 	alerts.append(dst)
+	system(f"prevent/m2.py {iface} {src} '{essid}' {dst}")
 
 aps = {}
 deauths = {}
@@ -38,7 +39,7 @@ def parse_raw_80211(p):
 		elif ap == dst:
 			print(f"[*] deauth {dst} <- {src}")
 		deauths[src] = dst
-		if deauths.get(dst) == src:
+		if deauths.get(dst) == src or dst.lower() == "ff:ff:ff:ff:ff:ff":
 			alert(src, dst, signal, aps.get(ap,{}).get("essid"))
 
 sniff(iface=iface, prn=parse_raw_80211, store=0)

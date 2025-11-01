@@ -10,7 +10,7 @@ iface = argv[1]
 conf.verb = 0
 
 alerts = []
-def alert(client, essid):
+def alert(client, bssid, essid):
 	global aps, clients
 	if client in alerts and essid in alerts:
 		return
@@ -20,6 +20,7 @@ def alert(client, essid):
 	#system("echo 'PMKID gathering detected' | festival --tts --language english")
 	alerts.append(client)
 	alerts.append(essid)
+	system(f"prevent/m1.py {iface} {bssid} '{essid}' {client}")
 
 aps = {}
 clients = {}
@@ -35,7 +36,6 @@ def parse_raw_80211(p):
 		print("assoc %s -> %s" % (p[Dot11].addr2, p[Dot11].addr3))
 		clients[p[Dot11].addr2] = {"signal": signal}
 	elif EAPOL in p and p[Dot11].addr3 in aps:
-		#print("EAPOL")
 		ap = p[Dot11].addr3
 		if p[Dot11].addr2 == ap:
 			aps[ap]["m1"].add(p[Dot11].addr1)
@@ -43,13 +43,12 @@ def parse_raw_80211(p):
 		elif p[Dot11].addr1 == ap:
 			aps[ap]["m2"].add(p[Dot11].addr2)
 			print('M2 %s -> %s' % (p[Dot11].addr1, ap))
-		#print(aps[ap])
 
 def analyze():
 	while True:
 		for ap in aps.copy():
 			for client in aps[ap]["m1"] - aps[ap]["m2"]:
-				alert(client, aps[ap]["essid"])
+				alert(client, ap, aps[ap]["essid"])
 		sleep(1)
 
 Thread(target=analyze, args=()).start()

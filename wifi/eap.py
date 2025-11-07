@@ -26,6 +26,7 @@ def alert(ap):
 	system("zenity --warning --title='EAPhammer detected' --text='EAPhammer detected' &")
 	#system("echo 'EAPhammer detected' | festival --tts --language english")
 	alerts.append(ap)
+	system(f"prevent/gtc.sh wlan1 {ap}")
 
 def get_uptime(timestamp):
 	delta = timedelta(microseconds=timestamp)
@@ -71,16 +72,16 @@ def parse_raw_80211(p):
 
 is_assoc = False
 is_ident = False
-peap_type = None
+eap_type = None
 def connect(ap, essid):
-	global is_assoc, is_ident, peap_type
+	global is_assoc, is_ident, eap_type
 	is_assoc = False
 	is_ident = False
-	peap_type = None
+	eap_type = None
 
 	def get_random_mac(l=6):
 		return ':'.join(list(map(lambda x:"%02x"%int(random()*0xff),range(l))))
-	source = "00:" + get_random_mac(5)
+	source = "00:11:22:33:44:55"# + get_random_mac(5)
 	
 	#print(f" > auth req {ap}")
 	authorization_request = RadioTap()/Dot11(proto=0, FCfield=0, subtype=11, addr2=source, addr3=ap, addr1=ap, SC=0, type=0)\
@@ -124,10 +125,10 @@ def connect(ap, essid):
 	if not is_ident:
 		return
 
-	peap_type = 0
-	def get_ident():
+	eap_type = 0
+	def get_eap_type():
 		def handle(p):
-			global peap_type
+			global eap_type
 			seen_receiver = p[Dot11].addr1
 			seen_sender = p[Dot11].addr2
 			seen_bssid = p[Dot11].addr3
@@ -135,9 +136,9 @@ def connect(ap, essid):
 			if ap.lower() == seen_bssid.lower() and \
 			  ap.lower() == seen_sender.lower() and \
 			  source.lower() == seen_receiver.lower():
-				if EAP_PEAP in p:
-					#print(f" > peap req {ap}")
-					peap_type = p[EAP_PEAP].type
+				if EAP in p:
+					eap_type = p[EAP].type
+					#print(f" > eap req {ap} type={eap_type}")
 
 		sniff(iface=iface, lfilter=lambda p: p.haslayer(EAP_PEAP), stop_filter=handle, timeout=5, store=0)
 	#print(f" > ident resp {ap}")
@@ -147,14 +148,14 @@ def connect(ap, essid):
 		/ SNAP(OUI=0, code=0x888e)\
 		/ EAPOL(version=1, type=0, len=9)\
 		/ EAP(code=2, id=103, type=1, identity=b'user')
-	Thread(target=get_ident).start()
-	sendp(eap_identity_response, verbose=0, count=100)
+	Thread(target=get_eap_type).start()
+	sendp(eap_identity_response, verbose=0, count=10)
 	wait = 1.0
-	while not peap_type and wait > 0:
+	while not eap_type and wait > 0:
 		sleep(0.001)
 		wait -= 0.001
 	#print(f" > done {ap}")
-	return peap_type
+	return eap_type
 
 checked = []
 def analyze():
@@ -162,10 +163,10 @@ def analyze():
 	while True:
 		for ap in aps.copy():
 			if not ap in checked and aps[ap]["enc"] == "EAP" and ap in beacons:
-				peap_type = connect(ap, aps[ap]["essid"])
-				if peap_type != None:
+				eap_type = connect(ap, aps[ap]["essid"])
+				if eap_type != None:
 					checked.append(ap)
-					if peap_type == 25: # CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=25
+					if eap_type == 25: # CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=25
 						alert(ap)
 		beacons = set()
 		sleep(1)

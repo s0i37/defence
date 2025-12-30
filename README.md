@@ -1,11 +1,13 @@
+[Русская версия](README_ru.md)
+
 # Hackings style defence tricks
-Simple technical techniques that allow you to detect intruders at different stages.
+Simple technical tricks that allow you to detect, study, and sometimes prevent hackers at various stages of penetration.
 All the techniques presented do not require exclusive rights and can be performed by an ordinary employee - everyone can protect their company.
 
-## Network level \[external intruder\]
-The attacker has not yet managed to penetrate your network. While he and you are separated by thousands of kilometers and dozens of hops.
+## The Internet perimeter \[external intruder\]
+The attacker is just about to break into your network. While he and you are separated by thousands of kilometers and dozens of intermediate network devices.
 
-Detection tricks.
+Counter reconnaissance tricks against hackers.
 
 ### proto.py
 
@@ -20,7 +22,7 @@ The TCP/IP network stack that connects the attacker to his target has several no
 
 <img alt="ip_id" src="img/ip_id.png">
 
-In this example, it is clear that the first traffic source has a weak increment, indicating that it sends packets to practically no one except our node - this indicates a likely targeted attack. The second node, in addition to us, manages to send from several hundred to a thousand packets - this indicates a likely fan attack on many nodes at once.
+In this example, it is clear that the first traffic source has a weak increment of IP.id, indicating that it sends packets to practically no one except our node - this indicates a likely targeted attack. The second node, in addition to us, manages to send from several hundred to a thousand packets - this indicates a likely wide attack on many nodes at once.
 
 ### nat.py
 
@@ -31,23 +33,371 @@ Each network packet in the IP layer has a TTL field, which decreases by 1 each t
 If the traffic source is located in a local network, we can see how deep it is by IP.TTL and, accordingly, roughly judge the size of the local network. Often, malicious activity from the depths of local networks is not a deliberate attack, but is a consequence of a virus infection of one of the PCs of some company and an attempt to spread.
 
 ### uptime.py
-[soon]
+The TCP protocol hides a very interesting field — the `timestamp` option which can be used to calculate the time the operating system booted. This information is found not only in outgoing connections but also in incoming ones. This means that most of the nodes sending traffic to us and attempting to attack us unknowingly disclose their uptime in TCP packets. This field doesn't actually match the boot time on all operating systems, but what's important is that it's constant and fairly unique for each computer. This means, like a unique hash, it can distinguish the traffic of any computer from the crowd, regardless of its IP address.
+The `uptime.py` script passively listens to network traffic and displays the uptime value for all incoming packets. Using this information, you can:
+
+1. Determine whether a particular IP address is the actual source of traffic. To do this, compare the uptime of packets coming from it with the uptime that can be queried on any open port. The figures below show two cases where the uptime matches and does not match:
+
+<table border="0">
+ <tr>
+    <td><img alt="uptime attacker" src="img/uptime-nat.png"></td>
+    <td><img alt="uptime NAT" src="img/uptime-nat2.png"></td>
+ </tr>
+</table>
+
+In the first case, the uptime matched perfectly, meaning the activity was coming directly from that IP. In the second case, the uptime didn't match, meaning that the IP address is a NAT or VPN gateway and is only forwarding someone else's traffic to you. Similar information can also be obtained using the `nat.py` script.
+
+2. See how many actual traffic sources are behind an IP address. To do this, simply monitor the uptime coming from that node for a while:
+
+<img alt="nat" src="img/uptime-pc_count.png">
+
+You can see at least three different uptimes from the same IP address. This means that this node is a gateway, and behind it are three PCs (three hackers).
+
+3. Understand that these different IP addresses are actually the same computer:
+
+<img alt="nat" src="img/uptime-deanon.png">
+
+If a hacker inadvertently leaks just one TCP packet outside the VPN, this could be enough to correlate the uptime of their real and anonymous IP addresses. This could easily de-anonymize the attacker.
+
+
+Counteraction tricks against hackers.
+The techniques presented below are not classic methods of passive defense, but approaches to active counteraction.
 
 ### services.py
-[soon]
+
+Hackers are typically interested not in open ports, but in the services that serve them. Using specific requests, a hacker forces a service to respond, thereby revealing its type, protocol, software, or even version. The `services.py` script can respond to such requests in a way that scanning software identifies it as a random service. The script only listens to a single specified port, but if all 65,000 unused ports are redirected to it, the hacker will see the following:
+
+<table border="0">
+ <tr>
+    <td><img alt="services" src="img/services.png"></td>
+    <td><img alt="nmap -sV" src="img/services-nmap.png"></td>
+ </tr>
+</table>
+
+This technique will make it much more difficult for a hacker to identify the real services.
 
 ### garbage.py
-[soon]
+
+Hacker port scanners, like any other software, can be prone to memory leaks and denial of service (DoS) if they're sent unexpected data. The `garbage.py` script exploits this flaw and sends an endless stream of special bytes back to the port scanner, causing it to leak all available RAM and eventually crash:
+
+<img alt="nat" src="img/garbage-nmap_leak.png">
+
+<img alt="nat" src="img/garbage-nmap_crash.png">
+
+Even though only the port scanner process crashes, it manages to allocate all available RAM, which forces all other processes to swap out memory and flushes the disk cache. Ultimately, after the scanner process crashes, the entire system may experience a temporary lag.
+In this case, exhausting the attacker's RAM would require sending them a significant amount of traffic, which may not always be appropriate. Therefore, another method for countering service identification is not memory exhaustion, but extreme slowdown of this process. The `garbage.py` script can also respond to port scanners in a special way, sending just one byte per second, causing the service identification process to hang:
+
+<img alt="nat" src="img/garbage-nmap_hang.png">
+
+The automated scanning pipelines (bots) that are most likely scanning you may either crash or slow down significantly.
 
 ### zip_bomb.py
-[soon]
+
+The HTTP protocol, which powers 90% of any company's perimeter technologies, allows for data to be sent using compression. If the transmitted data consists of just one character, the compression ratio can be up to 1000-fold. In other words, sending a hacker a compressed 10MB HTTP response will automatically exhaust 10GB of their RAM. This will likely lead to the crash of any scanning process. The `zip_bomb.py` script can respond with HTTP content 1000-fold compressed for the specified size.
+
+Specialized utilities (`dirsearch`, `wfuzz`, `ffuf`), which hackers use to probe website directories, are susceptible to this issue: sending just one HTTP response will cause them to crash, exhausting all available RAM:
+
+<table border="0">
+ <tr>
+    <td><img alt="zip bomb" src="img/zip_bomb.png"></td>
+    <td><img alt="ffuf" src="img/zip_bomb-dirsearch.png"></td>
+ </tr>
+</table>
+
+Linux, the operating system the hacker is likely using to attack you, has a well-known issue called OOM Killer, in which a memory leak causes severe system slowdowns, even to the point of completely freezing the operating system. Browsers are particularly vulnerable. If a hacker opens your web application in a browser, their operating system may freeze completely, leading to a forced system reboot, losing all unsaved data.
+
+<table border="0">
+ <tr>
+    <td><img alt="zip bomb" src="img/zip_bomb.png"></td>
+    <td><img alt="ffuf" src="img/zip_bomb-browser.png"></td>
+ </tr>
+</table>
+
+Web vulnerability scanners are also susceptible to the same problem:
+
+<table border="0">
+ <tr>
+    <td><img alt="zip bomb" src="img/zip_bomb.png"></td>
+    <td><img alt="ffuf" src="img/zip_bomb-acunetix.png"></td>
+ </tr>
+</table>
+
+## Wireless network perimeter \[external intruder\]
+
+Let's assume that the hacker still did not get into your local network and everything that was described earlier did not happen to you. But he can still get through there with physical attacks, being near your offices.
+Wireless networks are the first thing an external intruder will encounter, even if he has not yet managed to get close enough to you. `Wi-Fi` is an extremely common technology, susceptible to a wide variety of known attacks and, importantly, having sufficient ease of implementation. All this makes attacks on your wireless networks very real. Do not underestimate this attack surface, which is actually much more promising for a sufficiently motivated external attacker than your Internet perimeter.
+If we talk about protecting wireless networks, then in information security it is usually customary to only give recommendations on secure configuration. While the attacks themselves are considered to be quite silent. Although certain `Wireless IDS` solutions exist, they are extremely rare in our time. And it turns out to be a rather interesting situation: we have two perimeters: one in the digital space, protected by all sorts of `WAFs`, `SOCs` and other `IDS`/`IPS`, and in the real world - wireless networks that almost always go beyond the controlled area and in no way at all are not really protected.
+And therefore, our task will be to try to identify various current attacks only by listening to the radio broadcast.
+As already mentioned, it is believed that most attacks on wireless networks are silent and invisible. However, almost all of them have their own characteristics by which we will calculate them.
+
+Detection tricks (Wireless IDS).
+
+### wifi/deauth.py
+
+Deauthentication. Any hacker, new or experienced, who wants to infiltrate you will be located near your office and send out deauthentication packets. The attack is used on `WPA PSK` networks (the most common today) and consists of simultaneously disconnecting the access point and clients from each other. This is achieved by sending special packets in both directions from the names of both parties at once. This causes the client, which did not actually intend to disconnect from the access point, to resend the password hash (handshake) in a second `EAPOL` message. For a hacker, a `handshake` is of great interest, because it can be used to carry out a password guessing attack using a dictionary at fairly high speeds (millions per second). However, by listening to the radio air we can easily detect such attacks by receiving deauthentication packets from two sides at once:
+
+<table border="0">
+ <tr>
+    <td><img alt="bettercap deauth" src="img/wifi-bettercap_deauth.jpg"></td>
+    <td><img alt="deauth.py" src="img/wifi-deauth.png"></td>
+ </tr>
+</table>
+
+The signal level will even allow us to understand how close the hacker is to us and -30dBm means that he is actually opposite you.
+
+### wifi/pmkid.py
+
+Corporate wireless networks often use multiple access points with identical names to cover a large area. This creates a seamless transition for employees when they move from one access point's service area to another. On such access points, the first `EAPOL M1` message often contains a `PMKID` hash during authentication, which is almost the same as a `handshake`. Hackers really like this attack for its speed, because the hash comes from the access point itself, which makes it possible to capture the hash and guess the password without interacting with its clients. In addition, this attack is considered to be quite silent, because it does not cause negative consequences. However, there is a peculiarity in its implementation...
+Specialized software such as `hcxdumptool` or `bettercap`, in order to avoid capturing an unwanted `EAPOL M2` packet, do not send it as soon as an `EAPOL M1` arrives from the access point. And this is not typical for a legitimate client. This is because otherwise the hacker will capture two different hashes at once, and for example `aircrack-ng` cannot bruteforce PMKID in the presence of EAPOL M2. This is how this attack can be detected.
+
+<table border="0">
+ <tr>
+    <td><img alt="bettercap auth" src="img/wifi-bettercap_auth.jpg"></td>
+    <td><img alt="pmkid.py" src="img/wifi-pmkid.png"></td>
+ </tr>
+</table>
+
+### wifi/bruteforce.py
+
+If the hacker failed to succeed with the two previous attacks - capturing `handshake` and `PMKID`, which are the most common attacks on WPA PSK, then he can go further. Even if the hacker has a WPA network without a client and without PMKID, it is not protected if its password is 12345678. And the hacker can always pick up the password online - each time asking the password from the access point itself. In addition, he can do this from absolutely any phone, without raising any suspicions.
+By monitoring the radio broadcast, we can distinguish successful authentication attempts from unsuccessful ones by sending an `EAPOL M3` packet by the access point. And such a simple check allows us to see the online brute force of the access point.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute depth" src="img/wifi-bruteforce_depth.jpg"></td>
+    <td><img alt="brute.py" src="img/wifi-brute.png"></td>
+ </tr>
+</table>
+
+Often, medium and large companies can have multiple wireless networks. In addition to official access points, there can also be secondary ones (technological, service, test). Finally, wireless printer networks can also become a point of penetration. In turn, their network names may not clearly indicate their affiliation with the company. An experienced hacker, understanding this, is forced to attack all audible wireless networks, making a brute-force attack on a wide range of targets. Such an anomaly is easy to notice, and the `bruteforce.py` script copes with this perfectly:
+
+<table border="0">
+ <tr>
+    <td><img alt="brute width" src="img/wifi-bruteforce_width.png"></td>
+    <td><img alt="brute.py" src="img/wifi-brute2.png"></td>
+ </tr>
+</table>
+
+### wifi/wps.py
+
+WPS allows you to connect to a WPA PSK network in a simpler way - by entering an 8-digit numeric code. This technology has 4 vulnerabilities. The first vulnerability occurs in WPS v1 and consists of the lack of blocking on trying the entire range of PIN codes (11,000 combinations). By tracking EAPOL messages, the `wps.py` script lets us know when an attacker is brute-forcing WPS, when he has picked up the first half, and finally, when he has guessed the code.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute pin depth" src="img/wifi-reaver.jpg"></td>
+    <td><img alt="wps.py" src="img/wifi-wps_brute.png"></td>
+ </tr>
+</table>
+
+The last three vulnerabilities allow guessing the PIN code without a full search of the entire range due to weak cryptography in the access point, predictability of the PIN code based on the MAC address, or the use of an empty PIN code. And since exploitation no longer requires much time, an attacker can check these vulnerabilities on all audible access points. The `wps.py` script tracks such anomalies if the same client tried to search the PIN code on multiple access points at once.
+
+<table border="0">
+ <tr>
+    <td><img alt="brute pin width" src="img/wifi-pixiedust.jpg"></td>
+    <td><img alt="wps.py" src="img/wifi-wps_brute2.png"></td>
+ </tr>
+</table>
+
+### wifi/eviltwin.py
+
+As Kevin Mitnick said, a person is the most vulnerable link in any system. Hackers of all stripes love this attack, because it is aimed at human weakness. And such an attack will always be relevant. Novice hackers can start with this attack right away, and more experienced ones, only if all previous ones have failed.
+A hacker can simply launch a wireless open network with a name identical to the network being attacked. Implement his `captive portal` and lure certain data from the victim who connects to it.
+It is quite easy to detect such an attack, since next to legitimate access points another one appears with the same name but different security parameters. We simply monitor all `WPA` networks and compare whether there is a similar `OPN` network.
+The presence of two identical networks with different authentication parameters is an anomaly, because wireless clients cannot remember two different networks with the same name. This is a clear sign of an `EvilTwin` attack.
+
+<table border="0">
+ <tr>
+    <td><img alt="wifiphisher" src="img/wifi-wifiphisher.jpg"></td>
+    <td><img alt="eviltwin.py" src="img/wifi-eviltwin.png"></td>
+ </tr>
+</table>
+
+Since this attack belongs to the `Roque AP` class, the script records all `uptime` and `vendors`. An extremely low uptime confirms that the wireless network was just turned on by the hacker.
+
+### wifi/eap.py
+
+Typically, companies use `WPA Enterprise` networks, where each client has their own personal login and password.
+WPA Enterprise wireless networks use a separate authentication server and support multiple methods of accepting credentials from the client. And some of them are so insecure that they can force the client to send the password in plain text or as a hash. A hacker can simply launch a wireless network identical to the legitimate one and activate the most insecure authentication methods.
+For a legitimate network, the order of proposed authentication methods is from the most secure to the least. But for a hacker's wireless network - vice versa. This is the essence of the `GTC downgrade` attack.
+It is the first most insecure `GTC` method that is the marker for detecting this attack. The script monitors only WPA EAP networks and authenticates on each newly heard one to check the authentication methods. And as soon as a hacker nearby launches `eaphammer`, we immediately detect it.
+
+<table border="0">
+ <tr>
+    <td><img alt="eaphammer" src="img/wifi-eaphammer.jpg"></td>
+    <td><img alt="eap.py" src="img/wifi-eap.png"></td>
+ </tr>
+</table>
+
+In addition to the low `uptime`, we can see the `vendor` characteristic of hacker Wi-Fi adapters, as well as the signal level, indicating that the hacker is somewhere nearby.
+
+### wifi/karma.py
+
+Detection of the `KARMA` technique will finally finish off wireless hackers. After all, this technique is found explicitly and implicitly in almost all hacker tools. And somewhere it is default, which only increases the chances of detection.
+The KARMA technique is used to attract clients by sending them spoofed `Probe Response` packets. Using Probe packets is an alternative way to search for wireless networks, usually used for energy saving purposes. This technique allows hacker to connect many clients, regardless of the name of the wireless network.
+In some ways, this attack resembles `responder` and its effective detection can be performed in the same simple way. We periodically send `Probe Request` on the radio with a random non-existent name. A legitimate access point will never respond to such a packet. But the essence of the KARMA attack is to respond to all such requests, which is how a specialized hacker access point gives itself away.
+
+The `hcxdumptool` utility activates the KARMA technique by default. And if a hacker wanted to collect a `handshake` or `PMKID`, he gave himself away with this technique:
+
+<table border="0">
+ <tr>
+    <td><img alt="hcxdumptool" src="img/wifi-hcxdumptool.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+If a hacker tried to attack a WPA EAP network using `eaphammer`, he would also get caught, because KARMA is also used there by default:
+
+<table border="0">
+ <tr>
+    <td><img alt="eaphammer" src="img/wifi-eaphammer2.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+If a hacker performs an `EvilTwin` attack using `wifiphisher`, there will be an instant detection, because here too KARMA is used by default:
+
+<table border="0">
+ <tr>
+    <td><img alt="wifiphisher" src="img/wifi-wifiphisher2.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+Finally, the pure KARMA attack is used in `hostapd-mana`, a specially modified tool of the same name. And again - detection:
+
+<table border="0">
+ <tr>
+    <td><img alt="hostapd_mana" src="img/wifi-hostapd_mana.png"></td>
+    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
+ </tr>
+</table>
+
+### wifi/timing.py
+
+All attacks performed from the client's perspective and aimed at an access point typically require the attacker to craft special packets that cannot be sent directly by the Wi-Fi adapter. Therefore, various hacking tools send these packets by creating them themselves from scratch, while legitimate packets are generated directly by the Wi-Fi chip. This typically creates a noticeable time difference, as the raw packet has a much longer path to travel: user space -> kernel -> Wi-Fi chip.
+Every connection to an access point always involves a strict sequence of authentication, association, and other steps. This is achieved through the corresponding request-response pairs: auth_req/auth_resp, assoc_req/assoc_resp, ident_req/ident_resp, m1/m2. Legitimate clients have a delay of a few milliseconds between request/response transitions, while hacker tools typically have delays of tens of milliseconds, sometimes even more.
+The `timing.py` script can detect such small delays and identify raw packets in the radio airwaves, which are always sent by hacker software.
+
+Detection of the launch of the hacker utility `bettercap`, which connects to access points around:
+
+<table border="0">
+ <tr>
+    <td><img alt="hostapd_mana" src="img/bettercap.png"></td>
+    <td><img alt="karma.py" src="img/timing-bettercap.png"></td>
+ </tr>
+</table>
+
+Detection of the launch of the hacker utility `hcxdumptool`, which connects to access points around:
+
+<table border="0">
+ <tr>
+    <td><img alt="hostapd_mana" src="img/hcxdumptool.png"></td>
+    <td><img alt="karma.py" src="img/timing-hcxdumptool.png"></td>
+ </tr>
+</table>
+
+Detection of the launch of the hacker utility `reaver`, which connects to an access point:
+
+<table border="0">
+ <tr>
+    <td><img alt="hostapd_mana" src="img/reaver.png"></td>
+    <td><img alt="karma.py" src="img/timing-reaver.png"></td>
+ </tr>
+</table>
+
+In each case, the hacker software has a characteristic time delay in generating response radio packets to the access point.
+
+
+Prevention trick (Wireless IPS).
+
+### wifi/prevention/m2.py
+
+One option to prevent a `handshake` capture attack would be to send fake handshake signals over the airwaves. In order for the hacker software to register, three packets need to be sent over the air: `beacon`, `EAPOL M1` and `EAPOL M2`. The `m2.py` script can do this - it generates a handshake based on an arbitrary passphrase and places it in the EAPOL M2 package. The m2.py script is automatically called by the `deauth.py` script, which can detect this attack. Together they provide a solution for automatically responding to a deauthentication and WPA handshake capture attack:
+
+<table border="0">
+ <tr>
+    <td><img alt="m2.py" src="img/wifi-m2.png"></td>
+    <td><img alt="bettercap deauth" src="img/wifi-bettercap_deauth2.png"></td>
+ </tr>
+</table>
+
+Capture of false handshake by a hacker gives hope that the legitimate handshake will be overwritten or lost among the false ones:
+
+<img alt="hashcat" src="img/wifi-hashcat.png">
+
+In any case, forcing a hacker to brute force false handshake is a decrease in his overall productivity and, therefore, a decrease in the chances of his attack being successful.
+
+### wifi/prevention/m1.py
+
+To prevent `PMKID` hashes from being captured, similar fake hashes can be sent over the air. The `m1.py` script can generate a PMKID using an arbitrary passphrase and places it in the `EAPOL M1` package. In turn, the m1.py script is automatically called by the `pmkid.py` script, which can detect this attack:
+
+<table border="0">
+ <tr>
+    <td><img alt="m1.py" src="img/wifi-m1.png"></td>
+    <td><img alt="bettercap auth" src="img/wifi-bettercap_auth2.jpg"></td>
+ </tr>
+</table>
+
+Capturing false PMKIDs forces the hacker to waste time and computing power brute-forcing non-existent hashes:
+
+<img alt="hashcat" src="img/wifi-hashcat2.png">
+
+### wifi/prevention/gtc.sh
+
+If a hacker uses a malicious WPA Enterprise access point to obtain logins and passwords for corporate users, then an effective countermeasure is to send random pairs of logins and passwords to such an access point. The `gtc.sh` script can generate random credentials and sends them as a `netntlm1` hash. It is automatically called by the `eap.py` script when it detects this attack:
+
+<table border="0">
+ <tr>
+    <td><img alt="gtc.sh" src="img/gtc.png"></td>
+    <td><img alt="eaphammer" src="img/wifi-eaphammer2.jpg"></td>
+ </tr>
+</table>
+
+The hacker will not be able to distinguish the accepted fake credentials from the real ones and will be forced to spend resources not brute force each captured hash.
+
+### wifi/prevention/deauth.py
+
+The scripts `bruteforce.py` (detects online brute force attacks on access points) and `wps.py` (detects WPS attacks on access points), when malicious activity of a hacker on an access point is detected, automatically calls the script `deauth.py`, which performs `spot-based` deauthentication:
+
+<table border="0">
+ <tr>
+    <td><img alt="deauth.py" src="img/wifi-deauth2.png"></td>
+    <td><img alt="brute" src="img/wifi-bruteforce.jpg"></td>
+ </tr>
+</table>
+
+<table border="0">
+ <tr>
+   <td><img alt="deauth.py" src="img/wifi-deauth3.png"></td>
+   <td><img alt="brute pin" src="img/wifi-reaver2.jpg"></td>
+ </tr>
+</table>
+
+The scripts `eviltwin.py` (detection of phishing access points) and `karma.py` (detection of the entire family of RogueAP attacks) automatically call the script `deauth.py`, which performs `broadcast` deauthentication, to prevent potential victims from connecting to a malicious access point:
+
+<table border="0">
+ <tr>
+    <td><img alt="deauth.py" src="img/wifi-deauth4.png"></td>
+    <td><img alt="victim" src="img/wifi-client.jpg"></td>
+ </tr>
+</table>
+
+<table border="0">
+ <tr>
+    <td><img alt="deauth.py" src="img/wifi-deauth5.png"></td>
+    <td><img alt="hostapd_mana" src="img/wifi-hostapd_mana2.png"></td>
+ </tr>
+</table>
 
 ## Network level \[internal intruder\]
-The attacker has just penetrated your corporate network. He doesn't have an account yet and knows almost nothing about your network. His actions will be largely random. It is very important to catch the attacker at this early stage.
+
+The attacker has just penetrated your corporate network. He doesn't have a corporate account yet and knows almost nothing about your network. His actions can be largely random, and therefore quite noisy. It is very important to catch the attacker at this early stage.
+
 
 ### sniffer.py
+
 A running sniffer is not yet a network attack, but its detection is an important prerequisite for possible future attacks. A decent user will not run the sniffer.
-A carelessly launched sniffer will make DNS requests that are predictable for us, since the sniffer can show a domain name instead of an IP address. If we periodically send a packet on behalf of an IP address that has a PTR DNS record, and then check the presence of this record in the cache of the corporate DNS server (non-recursive request, aka DNS cache snooping), then we will most likely detect an attacker.
+A carelessly launched sniffer will make DNS requests that are predictable for us, since the sniffer can show a domain name instead of an IP address. If we periodically send a packet on behalf of an IP address that has a PTR DNS record, and then check the presence of this record in the cache of the corporate DNS server (non-recursive request, aka DNS cache snooping), then we will most likely detect an attacker:
 
 <table border="0">
  <tr>
@@ -57,9 +407,10 @@ A carelessly launched sniffer will make DNS requests that are predictable for us
 </table>
 
 ### tcp.py
+
 The second thing that an internal attacker will most likely use at the very beginning is, of course, port scanning. While he does not have an account and does not understand the structure of the network, he will blindly search for his targets by scanning ports. And sooner or later its packets will reach your computer.
 It is quite easy to notice such activity. Of all the traffic, only TCP-SYN packets need to be isolated, which is an excellent marker for this network attack. The `tcp.py` script reacts only to incoming connections; if the number of unique ports is exceeded, an alert occurs.
-As a result, even if the attacker scanned only a couple of ports, we will see it.
+As a result, even if the attacker scanned only a couple of ports, we will see it:
 
 <table border="0">
  <tr>
@@ -70,7 +421,7 @@ As a result, even if the attacker scanned only a couple of ports, we will see it
 
 ### mitm.py
 
-Having listened to enough traffic and scanned his targets, the attacker can finally move on to active action and begin intercepting traffic. It doesn’t matter how he does it, what matters is where it all leads. If an attacker begins to pass others traffic through himself, this will lead to a decrease in IP.ttl in it
+Having listened to enough traffic and scanned his targets, the attacker can finally move on to active action and begin intercepting traffic. It doesn’t matter how he does it, what matters is where it all leads. If an attacker begins to pass others traffic through himself, this will lead to a decrease in `IP.ttl` in it
 This script periodically pings each node in the list. And as soon as the route length (IP.ttl) changes somewhere, it produces a trace instantly calculating the impudent one.
 The first thing you need to monitor in this way is, of course, your gateway. However, this detection method allows you to see the consequences of traffic interception outside your own subnet - throughout the entire local network, because it is far from a fact that the attacker will be on the same subnet as you. So the monitoring list can be expanded to include critical servers - your DC, Exchange, SCCM, WSUS, virtualization, etc. Moreover, you can monitor the gateway of each VLAN and even each workstation.
 
@@ -90,7 +441,6 @@ However, the tracing procedure is somewhat longer, and therefore this default de
 In local networks, in addition to full-fledged MiTM attacks, “partial” traffic interception attacks can also be carried out. One example would be DHCP allowing you to specify yourself as a gateway or DNS server. By controlling DNS requests, an attacker can selectively redirect connections, thereby implementing partial MiTM.
 If IPv6 is not used on the local network, but it is not disabled on network nodes, then an attacker can achieve a similar effect using DHCPv6, since all modern operating systems prefer IPv6 over IPv4.
 Both attacks can be detected with single Discover requests. The script periodically sends such broadcast requests to DHCP and DHCPv6. And if someone else besides the legitimate node begins to respond, detection occurs.
-Application - only the current network segment.
 
 <table border="0">
  <tr>
@@ -106,11 +456,12 @@ Application - only the current network segment.
  </tr>
 </table>
 
+Application: only the current network segment.
+
 ### netbios.py
 
-In local networks, a much more popular example of partial traffic interception is <ins>responder</ins>. By responding with false responses to name resolution broadcasts (for example through NetBIOS), a hacker can trick your workstation into connecting anywhere, even to himself. As a result, this leads to erroneous connections, with usually automatic end-to-end authentication. In turn, this exposes credentials that can be subject to bruteforce attacks, or can be used to bypass authentication using NTLM relay attacks.
+In local networks, a much more popular example of partial traffic interception is `responder`. By responding with false responses to name resolution broadcasts (for example through NetBIOS), a hacker can trick your workstation into connecting anywhere, even to himself. As a result, this leads to erroneous connections, with usually automatic end-to-end authentication. In turn, this exposes credentials that can be subject to bruteforce attacks, or can be used to bypass authentication using NTLM relay attacks.
 Detecting a responder is easy. You just need to generate a random short name and ask about it broadcast. Script `netbios.py` makes this check. It periodically broadcasts NetBIOS requests with random names to the network. And as soon as the answers begin to arrive - alert.
-Application - only the current network segment.
 
 <table border="0">
  <tr>
@@ -119,8 +470,38 @@ Application - only the current network segment.
  </tr>
 </table>
 
+Application: only the current network segment.
+
 ### relay.py
-[soon]
+
+NTLM authentication redirection attacks currently account for almost half of all attacks on local networks with Windows hosts. If we can listen to the network traffic of other hosts, we can detect NTLM relay attacks against them. The `relay.py` script tracks the `Challenge` value for each NTLM authentication, which must always be unique. Having the same challenge value for two different NTLM authentications is only possible with an authentication redirection attack.
+
+Detecting an NTLM relay attack from `SMB` to `SMB` (lnk file):
+
+<table border="0">
+ <tr>
+    <td><img alt="slinky" src="img/slinky.png"></td>
+    <td><img alt="relay-smb" src="img/relay-smb.png"></td>
+ </tr>
+</table>
+
+Detecting NTLM-relay attack from `HTTP` to `LDAP` (NetBIOS spoofing):
+
+<table border="0">
+ <tr>
+    <td><img alt="NetBIOS spoofing" src="img/responder_ntlmrelayx.png"></td>
+    <td><img alt="relay-ldap" src="img/relay-ldap.png"></td>
+ </tr>
+</table>
+
+Detecting NTLM relay attack from `SMB` to `HTTP` (anonymous coerce + ADCS ESC8):
+
+<table border="0">
+ <tr>
+    <td><img alt="ADCS ESC8" src="img/adcs_esc8.png"></td>
+    <td><img alt="relay-http" src="img/relay-http.png"></td>
+ </tr>
+</table>
 
 ### honeypot/smb/ms17-010.sh
 
@@ -154,21 +535,6 @@ Based on the results of port scanning, it will certainly be included in the list
 
 And from the passwords we select, we can quickly understand that one or another dictionary was used.
 
-### honeypot/postgresql/auth.py
-
-[soon]
-
-### honeypot/mssql/auth.py
-
-[soon]
-
-### honeypot/rdp/auth.py
-
-[soon]
-
-## relay.py
-
-[soon]
 
 ## Active Directory level \[internal intruder\]
 
@@ -203,11 +569,36 @@ Using a small analytics script `auth-anal.py` and python's built-in math capabil
 
 An excellent marker that someone is brute-forceing your accounts is blocking the `Administrator` or the “wrong password” of the `Guest` user. You can also monitor an account that is not used by anyone, any authentication event for which can be considered an anomaly. And it is for these events that the `auth.py` script performs customized notification - `email`, `sms`, `telegram`.
 
+### ad/deception.py
+
+Any user with a domain account can make a simple deception trap, which will be no less effective than those of professional deception systems. It is only important to place the trap in a good place.
+Few hackers will get past network drives. In any company you can find several network drives with write permission, where you can put a file with the attractive name “password.docx” and place your login and arbitrary password in it. When a hacker discovers this file, he will certainly try this discovery, which will trigger a false authentication event, which can be seen in Active Directory by changing the `badPasswordTime` attribute. You just need to find a user that no one uses, this can be done with the following LDAP query:
+
+```
+(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(&(lastLogon<=132538500000000000)(badPasswordTime<=132538500000000000)))
+```
+
+Where the timestamp value can be calculated as follows:
+
+```
+echo $[(`date +"%s" -d '2020-12-31 06:00:00'` + 11644473600) * 10000000]
+(&(objectCategory=person)(objectClass=user)(lastLogon>=133124328000000000))
+```
+
+Now when a hacker falls for this false data layer, we will immediately detect this by an authentication event on an account that is not used by anyone:
+
+<table border="0">
+ <tr>
+    <td><img alt="deception" src="img/ad-deception.png"></td>
+    <td><img alt="deception.py" src="img/ad-deception2.png"></td>
+ </tr>
+</table>
+
 ### ad/changes.py
 
 There are a huge number of attacks in Active Directory. And most are united by the fact that each of them leaves traces in the form of corresponding attributes. By monitoring these same attributes via LDAP in real time, we could see any attack almost at the same second, even if the attacker is on the other end of the local network.
 This is quite possible and all you need is to be a simple domain user.
-Almost any change to anything in an AD object, including ACL modification, changes the whenChanged attribute, by which we can request changed objects in a loop.
+Almost any change to anything in an AD object, including ACL modification, changes the `whenChanged` attribute, by which we can request changed objects in a loop.
 
 As attacks develop in the Active Directory infrastructure, various misconfigurations of access rights are often discovered, as well as relay attacks that allow actions to be performed on behalf of another account. Ultimately, this allows attackers to perform many dangerous actions.
 An example of a neat and silent attack on a `user` object is to add a `servicePrincipalName` attribute to it and use a `TargetedKerberoasting` attack to obtain the user's password hash - and we see this attack to create and delete SPN:
@@ -237,7 +628,7 @@ Finally, attention should also be paid to `group policy objects`. Compromise of 
  </tr>
 </table>
 
-If an attacker has gained access to a particular `group` that is of interest to him, then the main thing he can do is, of course, add an account to this group. Adding an object to a group occurs through the member attribute, which we will see in the same second:
+If an attacker has gained access to a particular `group` that is of interest to him, then the main thing he can do is, of course, add an account to this group. Adding an object to a group occurs through the `member` attribute, which we will see in the same second:
 
 <table border="0">
  <tr>
@@ -246,7 +637,7 @@ If an attacker has gained access to a particular `group` that is of interest to 
  </tr>
 </table>
 
-ACL attacks are perhaps an even more subtle threat. Almost everything that was shown above can be a consequence of the development of misconfigurations of access rights (`ACL`). Well identified with the help of Bloodhound, they are often reliable, invisible paths leading a simple domain user to the kings - to the domain administrator. But are ACL modifications so invisible? In fact, even the slightest change in rights leads to an implicit change in the whenChanged attribute, which means our method will work here too.
+ACL attacks are perhaps an even more subtle threat. Almost everything that was shown above can be a consequence of the development of misconfigurations of access rights (`ACL`). Well identified with the help of `Bloodhound`, they are often reliable, invisible paths leading a simple domain user to the kings - to the domain administrator. But are ACL modifications so invisible? In fact, even the slightest change in rights leads to an implicit change in the whenChanged attribute, which means our method will work here too.
 If you have the appropriate rights (`GENERIC_ALL`, `WRITE_OWNER`), an insider can `change the owner` of an object. As soon as this happens, the object’s `nTSecurityDescriptor` attribute changes, which stores all information about the rights to this object. Despite the fact that the information in it is presented in binary form, the `changes.py` script can parse its structure to its canonical form. And in this example we immediately see what happened:
 
 <table border="0">
@@ -269,164 +660,8 @@ If an internal attacker discovers that he has rights to some object that allow h
 In real infrastructures, the path from the user to the domain administrator can be very thorny, and I would recommend paying attention to changing the ACL of any object where `GENERIC_ALL` and `WRITE_DACL` occur, since they each have the strongest impact in their own situation.
 
 The `changes.py` script, in just 100+ lines of code, is able, under any even non-privileged domain account, to see in real time which objects were created, deleted or changed. Show exactly which attributes have changed in them, including analysis of the ACL to a canonical, human-readable form.
-Just one script, which we will continue to see in almost all attacks, can become an almost universal tool for monitoring Active Directory.
+Just one script can become an almost universal tool for monitoring Active Directory.
 
-### ad/deception.py
-
-[soon]
-
-```
-echo $[(`date +"%s" -d '2020-12-31 06:00:00'` + 11644473600) * 10000000]
-(&(objectCategory=person)(objectClass=user)(lastLogon>=133124328000000000))
-```
-
-## Wi-Fi level \[external intruder\]
-
-Let's assume that the hacker still did not get into your local network and everything that was described earlier did not happen to you. But he can still get through there with physical attacks, being near your offices.
-Wireless networks are the first thing an external intruder will encounter, even if he has not yet managed to get close enough to you. `Wi-Fi` is an extremely common technology, susceptible to a wide variety of known attacks and, importantly, having sufficient ease of implementation. All this makes attacks on your wireless networks very real. Do not underestimate this attack surface, which is actually much more promising for a sufficiently motivated external attacker than your Internet perimeter.
-If we talk about protecting wireless networks, then in information security it is usually customary to only give recommendations on secure configuration. While the attacks themselves are considered to be quite silent. Although certain `Wireless IDS` solutions exist, most of which are academic hacks, they are extremely rare in our time. And it turns out to be a rather interesting situation: we have two perimeters: one in the digital space, protected by all sorts of `WAFs`, `SOCs` and other `IDS`/`IPS`, and in the real world - wireless networks that almost always go beyond the controlled area and in no way at all are not really protected.
-And therefore, our task will be to try to identify various current attacks only by listening to the radio broadcast.
-As already mentioned, it is believed that most attacks on wireless networks are silent and invisible. However, almost all of them have their own characteristics by which we will calculate them.
-
-### wifi/deauth.py
-
-Deauthentication. Any hacker, young or old, who wants to infiltrate you will be located near your office and send out deauthentication packets. The attack is used on `WPA PSK` networks (the most common today) and consists of simultaneously disconnecting the access point and clients from each other. This is achieved by sending special packets in both directions from the names of both parties at once. This causes the client, which did not actually intend to disconnect from the access point, to resend the password hash (handshake) in a second `EAPOL` message. For a hacker, a handshake is of great interest, because it can be used to carry out a password guessing attack using a dictionary at fairly high speeds (millions per second). However, by listening to the radio air we can easily detect such attacks by sending deauthentication packets from two sides at once:
-
-<table border="0">
- <tr>
-    <td><img alt="bettercap deauth" src="img/wifi-bettercap_deauth.jpg"></td>
-    <td><img alt="deauth.py" src="img/wifi-deauth.png"></td>
- </tr>
-</table>
-
-The signal level will even allow us to understand how close the hacker is to us and -30dBm means that he is actually opposite you.
-
-### wifi/pmkid.py
-
-Corporate wireless networks often use multiple access points with identical names to cover a large area. This creates a seamless transition for employees when they move from one access point's service area to another. On such access points, the first `EAPOL M1` message often contains a `PMKID` hash during authentication, which is almost the same as a `handshake`. Hackers really like this attack for its speed, because the hash comes from the access point itself, which makes it possible to capture the hash and guess the password without interacting with its clients. In addition, this attack is considered to be quite silent, because it does not cause negative consequences. However, there is a peculiarity in its implementation...
-Specialized software such as `hcxdumptool` or `bettercap`, in order to avoid capturing an unwanted `EAPOL M2` packet, do not send it as soon as an `EAPOL M1` arrives from the access point. And this is not typical for a legitimate client. This is because otherwise the hacker will capture two different hashes at once, and for example `aircrack-ng` cannot bruteforce `PMKID` in the presence of `EAPOL M2`. This is how this attack can be detected.
-
-<table border="0">
- <tr>
-    <td><img alt="bettercap auth" src="img/wifi-bettercap_auth.jpg"></td>
-    <td><img alt="pmkid.py" src="img/wifi-pmkid.png"></td>
- </tr>
-</table>
-
-### wifi/bruteforce.py
-
-If the hacker failed to succeed with the two previous attacks - capturing `handshake` and `PMKID`, which are the most common attacks on WPA PSK, then he can go further. Even if the hacker has a WPA network without a client and without PMKID, it is not protected if its password is 12345678. And the hacker can always pick up the password online - each time asking the password from the access point itself. In addition, he can do this from absolutely any phone, without raising any suspicions.
-By monitoring the radio broadcast, we can distinguish successful authentication attempts from unsuccessful ones by sending an `EAPOL M3` packet by the access point. And such a simple check allows us to see the online brute force of the access point.
-
-<table border="0">
- <tr>
-    <td><img alt="brute depth" src="img/wifi-bruteforce_depth.jpg"></td>
-    <td><img alt="brute.py" src="img/wifi-brute.png"></td>
- </tr>
-</table>
-
-Often, medium and large companies can have multiple wireless networks. In addition to official access points, there can also be secondary ones (technological, service, test). Finally, wireless printer networks can also become a point of penetration. In turn, their network names may not clearly indicate their affiliation with the company. An experienced hacker, understanding this, is forced to attack all audible wireless networks, making a brute-force attack on a wide range of targets. Such an anomaly is easy to notice, and the `bruteforce.py` script copes with this perfectly.
-
-<table border="0">
- <tr>
-    <td><img alt="brute width" src="img/wifi-bruteforce_width.png"></td>
-    <td><img alt="brute.py" src="img/wifi-brute2.png"></td>
- </tr>
-</table>
-
-### wifi/wps.py
-
-WPS allows you to connect to a WPA PSK network in a simpler way - by entering an 8-digit numeric code. This technology has 4 vulnerabilities. The first vulnerability occurs in WPS v1 and consists of the lack of blocking on trying the entire range of PIN codes (11,000 combinations). By tracking EAPOL messages, the `wps.py` script lets us know when an attacker is brute-forcing WPS, when he has picked up the first half, and finally, when he has guessed the code.
-
-<table border="0">
- <tr>
-    <td><img alt="brute pin depth" src="img/wifi-reaver.jpg"></td>
-    <td><img alt="wps.py" src="img/wifi-wps_brute.png"></td>
- </tr>
-</table>
-
-The last three vulnerabilities allow guessing the PIN code without a full search of the entire range due to weak cryptography in the access point, predictability of the PIN code based on the MAC address, or the use of an empty PIN code. And since exploitation no longer requires much time, an attacker can check these vulnerabilities on all audible access points. The `wps.py` script tracks such anomalies if the same client tried to search the PIN code on multiple access points at once.
-
-<table border="0">
- <tr>
-    <td><img alt="brute pin width" src="img/wifi-pixiedust.jpg"></td>
-    <td><img alt="wps.py" src="img/wifi-wps_brute2.png"></td>
- </tr>
-</table>
-
-### wifi/eviltwin.py
-
-As Kevin Mitnick said, a person is the most vulnerable link in any system. Hackers of all stripes love this attack, because it is aimed at human weakness. And such an attack will always be relevant. Novice hackers can start with this attack right away, and more experienced ones, only if all previous ones have failed.
-A hacker can simply launch a wireless open network with a name identical to the network being attacked. Implement his `captive portal` and lure certain data from the victim who connects to it.
-It is quite easy to detect such an attack. We simply monitor all `WPA` networks and compare whether there is a similar `OPN` network.
-The presence of two identical networks with different authentication parameters is an anomaly, because wireless clients cannot remember two different networks with the same name. This is a clear sign of an `EvilTwin` attack.
-
-<table border="0">
- <tr>
-    <td><img alt="wifiphisher" src="img/wifi-wifiphisher.jpg"></td>
-    <td><img alt="eviltwin.py" src="img/wifi-eviltwin.png"></td>
- </tr>
-</table>
-
-Since this attack belongs to the `Roque AP` class, the script records all `uptime` and `vendors`. An extremely low uptime confirms that the wireless network was just turned on by the hacker.
-
-### wifi/eap.py
-
-Typically, companies use `WPA Enterprise` networks, where each client has their own personal login and password.
-WPA Enterprise wireless networks use a separate authentication server and support multiple methods of accepting credentials from the client. And some of them are so insecure that they can force the client to send the password in plain text or as a hash. A hacker can simply launch a wireless network identical to the legitimate one and activate the most insecure authentication methods.
-For a legitimate network, the order of proposed authentication methods is from the most secure to the least. But for a hacker's wireless network - vice versa. This is the essence of the `GTC downgrade` attack.
-It is the first most insecure `GTC` method that is the marker for detecting this attack. The script monitors only WPA EAP networks and authenticates on each newly heard one to check the authentication methods. And as soon as a hacker nearby launches `eaphammer`, we immediately detect it.
-
-<table border="0">
- <tr>
-    <td><img alt="eaphammer" src="img/wifi-eaphammer.jpg"></td>
-    <td><img alt="eap.py" src="img/wifi-eap.png"></td>
- </tr>
-</table>
-
-In addition to the low `uptime`, we can see the `vendor` characteristic of hacker Wi-Fi adapters, as well as the signal level, indicating that the hacker is somewhere nearby.
-
-### wifi/karma.py
-
-Detection of the `KARMA` technique will finally finish off wireless hackers. After all, this technique is found explicitly and implicitly in almost all hacker tools. And somewhere it is default, which only increases the chances of detection.
-The KARMA technique is used to attract clients by sending them spoofed `Probe Response` packets. Using Probe packets is an alternative way to search for wireless networks, usually used for energy saving purposes. This technique allows hacker to connect many clients, regardless of the name of the wireless network.
-In some ways, this attack resembles `responder` and its effective detection can be performed in the same simple way. We periodically send `Probe Request` on the radio with a random non-existent name. A legitimate access point will never respond to such a packet. But the essence of the KARMA attack is to respond to all such requests, which is how a specialized hacker access point gives itself away.
-
-The `hcxdumptool` utility activates the KARMA technique by default. And if a hacker wanted to collect a `handshake` or `PMKID`, he gave himself away with this technique.
-
-<table border="0">
- <tr>
-    <td><img alt="hcxdumptool" src="img/wifi-hcxdumptool.png"></td>
-    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
- </tr>
-</table>
-
-If a hacker tried to attack a WPA EAP network using `eaphammer`, he would also get caught, because KARMA is also used there by default.
-
-<table border="0">
- <tr>
-    <td><img alt="eaphammer" src="img/wifi-eaphammer2.png"></td>
-    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
- </tr>
-</table>
-
-If a hacker performs an `EvilTwin` attack using `wifiphisher`, there will be an instant detection, because here too KARMA is used by default.
-
-<table border="0">
- <tr>
-    <td><img alt="wifiphisher" src="img/wifi-wifiphisher2.png"></td>
-    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
- </tr>
-</table>
-
-Finally, the pure KARMA attack is used in `hostapd-mana`, a specially modified tool of the same name. And again - detection.
-
-<table border="0">
- <tr>
-    <td><img alt="hostapd_mana" src="img/wifi-hostapd_mana.png"></td>
-    <td><img alt="karma.py" src="img/wifi-karma.png"></td>
- </tr>
-</table>
 
 ## POST
 

@@ -33,4 +33,4 @@ def parse(p):
 
 conf.iface = argv[1]
 ip = conf.iface.ip
-sniff(iface=conf.iface, prn=parse, filter='tcp[tcpflags] == tcp-syn and dst host %s'%ip)
+sniff(iface=conf.iface, prn=parse, filter='tcp[tcpflags] == tcp-syn and dst host %s'%ip, store=0)

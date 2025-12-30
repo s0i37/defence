@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 from scapy.all import *
 from time import sleep
-from sys import argv
 from os import system
+from sys import argv
 
 
 targets = []

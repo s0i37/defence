@@ -4,8 +4,8 @@ from geolite2 import geolite2 #pip3 install maxminddb-geolite2
 from ipwhois import IPWhois #pip3 install ipwhois
 import scapy_p0f #pip3 install scapy-p0f
 from netaddr import IPNetwork
-import datetime
-import time
+from datetime import datetime
+from time import time
 from sys import argv
 
 
@@ -58,6 +58,21 @@ def p0f(packet):
 			os = "Cisco"
 	return os, ver
 
+timestamps = {}
+def get_hz(ts):
+	global timestamps
+	hzs = [1000, 100]
+	for timestamp in timestamps.copy():
+		for hz in hzs:
+			if int(ts/hz) - int(timestamp/hz) == int(time()) - int(timestamps[timestamp]["time"]):
+				timestamps[ts] = {"time": time(), "hz": hz}
+				delta = timestamps[ts]["hz"] - timestamps[timestamp]["hz"]
+				if not delta:
+					del(timestamps[timestamp])
+				return hz
+	timestamps[ts] = {"time": time(), "hz": 1000}
+	return timestamps[ts]["hz"]
+
 uptimes = {}
 def parse(packet):
 	global uptimes
@@ -65,8 +80,9 @@ def parse(packet):
 		#print(packet[IP].src, packet[TCP].options)
 		for option in packet[TCP].options:
 			if option[0] == 'Timestamp':
-				boot_timestamp = option[1][0] / 1000 #HZ
-				boot_time = datetime.datetime.utcfromtimestamp(time.time() - boot_timestamp).strftime('%Y-%m-%d %H:%M')
+				hz = get_hz(option[1][0])
+				boot_timestamp = option[1][0] / hz
+				boot_time = datetime.utcfromtimestamp(time() - boot_timestamp).strftime('%Y-%m-%d %H:%M')
 				ip = packet[IP].src
 				if not ip in uptimes: uptimes[ip] = []
 				if not boot_time in uptimes[ip]:
@@ -77,13 +93,14 @@ def parse(packet):
 					else:
 						geoip = {"country": "", "city": "",}
 						whois = {"netname": "intranet", "descr": ""}
-					print("{os} {country} {city} {netname} {src}: {uptime}".format(
+					print("{os} {country} {city} {netname} {src}: {uptime} (HZ={hz})".format(
 							os=f"{os}{ver}",
 							country=geoip["country"],
 							city=geoip["city"],
 							netname=whois["netname"],
 							src=ip,
-							uptime=boot_time
+							uptime=boot_time,
+							hz=hz
 						))
 					uptimes[ip].append(boot_time)
 				break

@@ -25,6 +25,7 @@ def alert(client, ap, reason):
 	#system("echo 'WPS bruteforce detected' | festival --tts --language english")
 	alerts.append(client)
 	alerts.append(ap)
+	system(f"prevent/deauth.py {iface} {ap} {client}")
 
 aps = {}
 clients = {}
@@ -150,6 +151,3 @@ def analyze():
 
 Thread(target=analyze, args=()).start()
 sniff(iface=iface, prn=parse_raw_80211, store=0)
-
-#https://github.com/ml31415/wpscrack/blob/master/wpscrack.py
-#http://archive.hack.lu/2014/Hacklu2014_offline_bruteforce_attack_on_wps.pdf

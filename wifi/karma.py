@@ -23,6 +23,7 @@ def alert(ap, essid, signal):
 	system("zenity --warning --title='KARMA detected' --text='KARMA detected' &")
 	#system("echo 'KARMA detected' | festival --tts --language english")
 	alerts.append(ap)
+	system(f"prevent/deauth.py {iface} {ap} ff:ff:ff:ff:ff:ff")
 	
 def probe_request(essid):
 	source = "00:11:22:33:44:55"

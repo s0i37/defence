@@ -24,6 +24,7 @@ def alert(ap):
 	system("zenity --warning --title='EvilTwin AP detected' --text='EvilTwin AP detected' &")
 	#system("echo 'EvilTwin AP detected' | festival --tts --language english")
 	alerts.append(ap)
+	system(f"prevent/deauth.py {iface} {ap} ff:ff:ff:ff:ff:ff")
 
 def get_uptime(timestamp):
 	delta = timedelta(microseconds=timestamp)

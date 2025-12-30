@@ -90,7 +90,7 @@ def analyze(packet):
 					src_port=src_port,
 					proto=proto,
 					dst_port=dst_port,
-					os=os,
+					os=f"{os}{ver}",
 					country=geoip["country"],
 					city=geoip["city"],
 					netname=whois["netname"]

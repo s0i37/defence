@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*- 
-from ldap3 import Server, Connection, SUBTREE, ALL
+from ldap3 import Server, Connection, SUBTREE, ALL, NTLM, GSSAPI,SASL
 from time import sleep
 from datetime import datetime
 from getpass import getpass
@@ -9,21 +9,31 @@ from sys import argv
 from colorama import Fore
 
 dc = argv[1]
-userdom = argv[2] # "user@company.org"
 USERS = { # notifications
 	'auth': ['honeypot_user'],
 	'fail': ['guest', 'security', 'audit', 'testuser', 'test1'],
 	'lock': ['administrator', 'guest', 'security', 'audit', 'testuser', 'test1']
 }
+BLACKLIST = ('incident',)
 MAX_LOCKS = 50
 MAX_FAILS = 100
+INTERVAL = 1
 
 server = Server(dc, get_info=ALL)
+#server = Server(dc, port=636, use_ssl=True, get_info=ALL)
 Connection(server, auto_bind=True)
-root = server.info.naming_contexts[0]
 server_time = server.info.other.get('currentTime')[0]
-print("{root} {server_time}".format(root=root, server_time=server_time))
-conn = Connection(server, user=userdom, password=argv[3] if len(argv) > 3 else getpass("password: "))
+if len(argv) < 4:
+	print(server_time)
+	print("\n".join(server.info.naming_contexts))
+	exit()
+else:
+	root = argv[3]
+userdom = argv[2] # "company\\user"
+#conn = Connection(server, user=userdom, password=getpass("password: "))
+conn = Connection(server, user=userdom, password=getpass("password: "), authentication=NTLM)
+#conn = Connection(server, authentication=SASL, sasl_mechanism=GSSAPI)
+#conn.start_tls()
 conn.bind()
 
 alerts = []
@@ -51,7 +61,7 @@ while True:
 		dn = result.entry_dn
 		if result['sAMAccountName']:
 			user = result['sAMAccountName'].value
-			if user.lower() in ('incident',):
+			if user.lower() in BLACKLIST:
 				continue
 			auth_failure_count = ""
 			if result['badPwdCount']:
@@ -83,4 +93,4 @@ while True:
 	if len(fails) > MAX_FAILS:
 		alert("mass fails users", str(len(fails)))
 	timestamp = int(max(lasts) + 1)
-	sleep(1)
+	sleep(INTERVAL)

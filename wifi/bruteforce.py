@@ -24,6 +24,7 @@ def alert(client, ap, reason):
 	#system("echo 'WPA bruteforce detected' | festival --tts --language english")
 	alerts.append(client)
 	alerts.append(ap)
+	system(f"prevent/deauth.py {iface} {ap} {client}")
 
 aps = {}
 clients = {}

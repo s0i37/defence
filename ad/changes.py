@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 from ldap3.protocol.microsoft import security_descriptor_control
-from ldap3 import Server, Connection, SUBTREE, BASE, ALL, ALL_ATTRIBUTES
+from ldap3 import Server, Connection, SUBTREE, BASE, ALL, ALL_ATTRIBUTES, NTLM, GSSAPI,SASL
 import pickle
 from time import sleep
 from datetime import datetime
@@ -18,19 +18,22 @@ from winacl.dtyp.ace import ADS_ACCESS_MASK
 
 dc = argv[1]
 ATTACKS = { # notifications
-	"SPN attack": {"attr": "^serviceprincipalname$", "dn": ".*"},
-	"RBCD attack" : {"attr": "^msds-allowedtoactonbehalfofotheridentity$", "dn": ".*"},
-	"ShadowCredentials attack" : {"attr": "^msds-keycredentiallink$", "dn": ".*"},
-	"membership changed": {"attr": "^member$", "dn": ".*admin.*"},
-	"GPO attack": {"attr": "^gpcfilesyspath$", "dn": ".*"},
-	"user object abuse": {"attr": "^scriptpath$", "dn": ".*"},
-	"ACL attack": {"attr": ".*generic_all.*", "dn": ".*"},
-	"sAMAccountName spoofing": {"attr": "^samaccountname$", "dn": ".*"},
-	"dNSHostName spoofing": {"attr": "^dnshostname$", "dn": ".*"},
-	"ADCS attack templates ESC4": {"attr": "^(msPKI-Certificate-Name-Flag|msPKI-Enrollment-Flag|msPKI-RA-Signature)$", "dn": ".*CN=Certificate Templates,.*"}
+	"SPN attack": {"attr": "^serviceprincipalname$", "val": ".*", "dn": ".*"},
+	"RBCD attack" : {"attr": "^msds-allowedtoactonbehalfofotheridentity$", "val": ".*", "dn": ".*"},
+	"ShadowCredentials attack" : {"attr": "^msds-keycredentiallink$", "val": ".*", "dn": ".*"},
+	"membership changed": {"attr": "^member$", "val": ".*", "dn": ".*admin.*"},
+	"GPO attack": {"attr": "^gpcfilesyspath$", "val": ".*", "dn": ".*"},
+	"user object abuse": {"attr": "^scriptpath$", "val": ".*", "dn": ".*"},
+	"ACL attack": {"attr": ".*generic_all.*", "val": ".*", "dn": ".*"},
+	"sAMAccountName spoofing": {"attr": "^samaccountname$", "val": r"^(.*dc.*(?!\$).)$", "dn": ".*"},
+	"dNSHostName spoofing": {"attr": "^dnshostname$", "val": ".*dc.*", "dn": ".*"},
+	"ADCS attack templates ESC4": {"attr": "^(msPKI-Certificate-Name-Flag|msPKI-Enrollment-Flag|msPKI-RA-Signature)$", "val": ".*", "dn": ".*CN=Certificate Templates,.*"},
+	"kerberos-relay attack": {"attr": "TODO", "val": ".*1UWhR.*", "dn": ".*"}
 }
+INTERVAL = 1
 
 server = Server(dc, get_info=ALL)
+#server = Server(dc, port=636, use_ssl=True, get_info=ALL)
 Connection(server, auto_bind=True)
 server_time = server.info.other.get('currentTime')[0]
 if len(argv) < 4:
@@ -39,8 +42,10 @@ if len(argv) < 4:
 	exit()
 else:
 	root = argv[3]
-userdom = argv[2] # "user@company.org"
-conn = Connection(server, user=userdom, password=getpass("password: "))
+userdom = argv[2] # "company\\user"
+#conn = Connection(server, user=userdom, password=getpass("password: "))
+conn = Connection(server, user=userdom, password=getpass("password: "), authentication=NTLM)
+#conn = Connection(server, authentication=SASL, sasl_mechanism=GSSAPI)
 conn.bind()
 
 alerts = []
@@ -136,10 +141,11 @@ def print_diff(dn):
 							print(f"{Fore.RED}delete %s: %s{Fore.RESET}" % (attr, value))
 		for attr in attrs_after:
 			if not attr in attrs_before:
-				print(f"{Fore.GREEN}new %s: %s{Fore.RESET}" % (attr, str(attrs_after[attr])))
-				for attack in ATTACKS:
-					if (match(ATTACKS[attack]["attr"].lower(), attr.lower()) or match(ATTACKS[attack]["attr"].lower(), str(attrs_after[attr]).lower())) and match(ATTACKS[attack]["dn"].lower(), dn.lower()):
-						alert(dn, attr, attrs_after[attr].decode(), attack)
+				for value in attrs_after[attr]:
+					print(f"{Fore.GREEN}new %s: %s{Fore.RESET}" % (attr, value))
+					for attack in ATTACKS:
+						if match(ATTACKS[attack]["attr"].lower(), attr.lower()) and match(ATTACKS[attack]["val"].lower(), str(value).lower()) and match(ATTACKS[attack]["dn"].lower(), dn.lower()):
+							alert(dn, attr, str(value), attack)
 			else:
 				if type(attrs_after[attr]) == dict:
 					diff(attrs_before[attr], attrs_after[attr])
@@ -148,8 +154,10 @@ def print_diff(dn):
 						if not value in attrs_before[attr]:
 							print(f"{Fore.GREEN}added %s: %s{Fore.RESET}" % (attr, value))
 							for attack in ATTACKS:
-								if (match(ATTACKS[attack]["attr"].lower(), attr.lower()) or match(ATTACKS[attack]["attr"].lower(), str(value).lower())) and match(ATTACKS[attack]["dn"].lower(), dn.lower()):
-									alert(dn, attr, value.decode(), attack)
+								if match(ATTACKS[attack]["attr"].lower(), attr.lower()) and match(ATTACKS[attack]["val"].lower(), str(value).lower()) and match(ATTACKS[attack]["dn"].lower(), dn.lower()):
+									if attack == "SPN attack" and str(value).split("/")[1].lower() == attrs_after.get("dNSHostName","").lower():
+										continue
+									alert(dn, attr, str(value), attack)
 	attrs = get_attrs(dn)
 	diff(objects[dn], attrs)
 	objects[dn] = attrs
@@ -178,5 +186,5 @@ while True:
 				print_diff(dn)
 			lasts.append(changed.timestamp())
 	now = max(lasts) + 1
-	sleep(1)
+	sleep(INTERVAL)
 	first_time = False
